@@ -1,0 +1,1 @@
+podman run -d -p 7860:7860 --name langflow docker.io/langflowai/langflow:latest
