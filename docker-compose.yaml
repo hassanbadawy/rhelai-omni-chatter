@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  langflow:
+    image: docker.io/langflowai/langflow:latest
+    ports:
+      - "7860:7860"
+    environment:
+      - LANGFLOW_DATABASE_URL=sqlite:///data/langflow.db
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - langflow-data:/data
+    restart: unless-stopped
+
+  qdrant:
+    image: docker.io/qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+# http://localhost:6333/dashboard
+
+volumes:
+  langflow-data:
+  qdrant-data:

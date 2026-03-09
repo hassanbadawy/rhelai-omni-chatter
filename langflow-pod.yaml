@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: langflow
+  labels:
+    app: langflow
+spec:
+  containers:
+    - name: langflow
+      image: docker.io/langflowai/langflow:latest
+      ports:
+        - containerPort: 7860
+          hostPort: 7860

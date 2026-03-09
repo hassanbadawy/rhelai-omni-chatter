@@ -1,0 +1,10 @@
+# langflow -> vLLM
+in langflow add vllm block
+Model Name: llama32
+vLLM api Base: https://llama32-ai501.apps.ocp.8r4k4.sandbox235.opentlc.com/v1
+Api key: fake (anything)
+
+# langflow -> llama-stack
+  - API Base: https://llama-stack-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/v1                                                                  
+  - Model name: vllm/llama32                                                                                                                           
+  - API Key: fake (or any non-empty string)
