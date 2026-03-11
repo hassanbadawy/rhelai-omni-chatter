@@ -1,0 +1,20 @@
+streamlit
+pandas
+llama-stack-client==0.3.0
+streamlit-option-menu
+llama-stack==0.3.0
+# Provider SDKs required by the starter distribution
+together
+boto3
+openai
+anthropic
+google-generativeai
+groq
+fireworks-ai
+sentence-transformers
+faiss-cpu
+huggingface-hub
+sqlite-vec
+torchtune
+mcp
+autoevals
