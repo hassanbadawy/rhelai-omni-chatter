@@ -467,6 +467,15 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
 ---
 # =============================================================================
 # n8n - Workflow automation (port 5678)
@@ -557,6 +566,15 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
 ---
 # =============================================================================
 # PostgreSQL - Database (port 5432)
@@ -638,6 +656,101 @@ spec:
       targetPort: 5432
       protocol: TCP
       name: postgresql
+---
+# =============================================================================
+# pgAdmin - PostgreSQL web admin UI (port 5050)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: langflow
+  labels:
+    app: pgadmin
+    app.kubernetes.io/part-of: langflow-stack
+    app.openshift.io/runtime: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      serviceAccountName: pgadmin-sa
+      containers:
+        - name: pgadmin
+          image: docker.io/dpage/pgadmin4:latest
+          ports:
+            - containerPort: 5050
+              protocol: TCP
+              name: http
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: "admin@example.com"
+            - name: PGADMIN_DEFAULT_PASSWORD
+              value: "admin"
+            - name: PGADMIN_LISTEN_PORT
+              value: "5050"
+            - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
+              value: "False"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+      volumes:
+        - name: pgadmin-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: langflow
+  labels:
+    app: pgadmin
+spec:
+  selector:
+    app: pgadmin
+  ports:
+    - port: 5050
+      targetPort: 5050
+      protocol: TCP
+      name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: pgadmin
+  namespace: langflow
+  labels:
+    app: pgadmin
+spec:
+  to:
+    kind: Service
+    name: pgadmin
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
 ---
 # =============================================================================
 # PostgREST - RESTful API for PostgreSQL (port 3000)
@@ -787,6 +900,183 @@ spec:
   to:
     kind: Service
     name: swagger-ui
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
+---
+# =============================================================================
+# Dashy - Dashboard with workspace view (port 8080)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashy-config
+  namespace: langflow
+  labels:
+    app: dashy
+data:
+  conf.yml: |
+    pageInfo:
+      title: Langflow Stack
+      description: AI Platform Dashboard
+    appConfig:
+      theme: lissy
+      startingView: workspace
+      defaultOpeningMethod: workspace
+      enableMultiTasking: true
+      workspaceLandingUrl: https://langflow-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+      statusCheck: false
+      disableConfiguration: false
+    sections:
+      - name: AI Platform
+        icon: fas fa-brain
+        items:
+          - title: Langflow
+            description: Visual LLM flow builder
+            url: https://langflow-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            icon: fas fa-project-diagram
+            target: workspace
+          - title: Llama Stack API
+            description: Inference, RAG, agents, safety
+            url: https://llama-stack-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/docs
+            icon: fas fa-server
+            target: workspace
+      - name: Automation
+        icon: fas fa-cogs
+        items:
+          - title: n8n
+            description: Workflow automation
+            url: https://n8n-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            icon: fas fa-sitemap
+            target: workspace
+      - name: Qdrant
+        icon: fas fa-database
+        items:
+          - title: Dashboard
+            description: Qdrant overview
+            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/welcome
+            icon: fas fa-tachometer-alt
+            target: workspace
+          - title: Console
+            description: Query console
+            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/console
+            icon: fas fa-terminal
+            target: workspace
+          - title: Collections
+            description: Vector collections
+            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/collections
+            icon: fas fa-layer-group
+            target: workspace
+          - title: Datasets
+            description: Manage datasets
+            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/datasets
+            icon: fas fa-th-list
+            target: workspace
+          - title: Tutorial
+            description: Getting started guide
+            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/tutorial
+            icon: fas fa-graduation-cap
+            target: workspace
+      - name: Database
+        icon: fas fa-table
+        items:
+          - title: pgAdmin
+            description: PostgreSQL web admin
+            url: https://pgadmin-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            icon: fas fa-elephant
+            target: workspace
+          - title: Swagger UI
+            description: PostgREST API docs
+            url: https://swagger-ui-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            icon: fas fa-file-code
+            target: workspace
+          - title: PostgREST
+            description: REST API for PostgreSQL
+            url: https://postgrest-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            icon: fas fa-plug
+            target: workspace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashy
+  namespace: langflow
+  labels:
+    app: dashy
+    app.kubernetes.io/part-of: langflow-stack
+    app.openshift.io/runtime: nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashy
+  template:
+    metadata:
+      labels:
+        app: dashy
+    spec:
+      serviceAccountName: dashy-sa
+      containers:
+        - name: dashy
+          image: docker.io/lissy93/dashy:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /app/user-data/conf.yml
+              subPath: conf.yml
+      volumes:
+        - name: config
+          configMap:
+            name: dashy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashy
+  namespace: langflow
+  labels:
+    app: dashy
+spec:
+  selector:
+    app: dashy
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dashy
+  namespace: langflow
+  labels:
+    app: dashy
+spec:
+  to:
+    kind: Service
+    name: dashy
   port:
     targetPort: http
   tls:

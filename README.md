@@ -137,3 +137,21 @@ oc get route -A | grep -i -E "vllm|llama"
   - n8n — https://n8n-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                                   
   - PostgREST — https://postgrest-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                       
   - Swagger UI — https://swagger-ui-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com     
+
+   pgAdmin is Running (1/1). Access it at:                                                                                                              
+                                                                                                                                                       
+  https://pgadmin-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                                                                
+  Login credentials:                                          
+  -Email:admin@examplecom  
+  -Password:admin                                            
+
+  To connect to PostgreSQL, add a server with:                                                                                                         
+  - Host: postgresql.langflow.svc
+  - Port: 5432
+  - User: app_user
+  - Password: password
+  - Database: appdb
+
+ Glance is running. Access your dashboard at:                                                                                                         
+# Dashy
+ https://dashy-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com  
