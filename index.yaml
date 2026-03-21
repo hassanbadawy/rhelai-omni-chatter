@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  langflow-stack:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-03-21T15:40:34.907831763Z"
+    description: A Helm chart for deploying Langflow AI Platform on OpenShift (Langflow,
+      Llama Stack, Qdrant, n8n, PostgreSQL, PostgREST, Swagger UI, pgAdmin, Dashy)
+    digest: a37d712b1a5b91f83f0dfb5588e6cc5a48dd69db99e82cb1a31842dea18ae83a
+    keywords:
+    - langflow
+    - llama-stack
+    - openshift
+    - ai
+    - qdrant
+    - n8n
+    - postgresql
+    maintainers:
+    - name: hasanbadawy
+    name: langflow-stack
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/langflow-stack-0.1.0/langflow-stack-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-03-21T15:40:34.907837143Z"
