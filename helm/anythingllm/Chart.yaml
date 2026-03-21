@@ -2,7 +2,7 @@ apiVersion: v2
 name: anythingllm
 description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user support on OpenShift
 type: application
-version: 0.2.0
+version: 0.3.0
 appVersion: "latest"
 icon: https://avatars.githubusercontent.com/u/132292527
 keywords:
