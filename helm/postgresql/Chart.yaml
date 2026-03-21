@@ -2,7 +2,7 @@ apiVersion: v2
 name: postgresql
 description: PostgreSQL 16 database on Red Hat UBI for OpenShift with persistent storage
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "16"
 icon: https://wiki.postgresql.org/images/a/a4/PostgreSQL_logo.3colors.svg
 keywords:

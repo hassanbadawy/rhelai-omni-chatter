@@ -1,10 +1,14 @@
 image: registry.redhat.io/rhel9/postgresql-16:latest
 replicas: 1
+port: 5432
 storage: 5Gi
 
 user: app_user
 password: password
 database: appdb
+
+route:
+  enabled: false
 
 resources:
   requests:

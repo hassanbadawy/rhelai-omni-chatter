@@ -1,8 +1,12 @@
 image: langflowai/langflow:latest
 replicas: 1
 storage: 1Gi
+port: 7860
 
 autoLogin: "true"
+
+route:
+  enabled: true
 
 resources:
   requests:

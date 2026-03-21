@@ -2,9 +2,9 @@ apiVersion: v2
 name: pgadmin
 description: pgAdmin 4 web-based PostgreSQL administration tool for OpenShift
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
-icon: https://www.pgadmin.org/static/COMPILED/assets/img/logo-right-128.png
+icon: https://raw.githubusercontent.com/pgadmin-org/pgadmin4/master/runtime/assets/pgAdmin4.png
 keywords:
   - pgadmin
   - postgresql

@@ -1,6 +1,12 @@
 image: docker.io/qdrant/qdrant:latest
 replicas: 1
 
+httpPort: 6333
+grpcPort: 6334
+
+route:
+  enabled: true
+
 resources:
   requests:
     cpu: 250m

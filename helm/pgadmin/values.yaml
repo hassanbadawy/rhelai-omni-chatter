@@ -1,8 +1,12 @@
 image: docker.io/dpage/pgadmin4:latest
 replicas: 1
+port: 5050
 
 email: "admin@example.com"
 password: "admin"
+
+route:
+  enabled: true
 
 resources:
   requests:

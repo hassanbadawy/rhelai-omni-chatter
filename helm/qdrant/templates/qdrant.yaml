@@ -20,10 +20,10 @@ spec:
         - name: qdrant
           image: {{ .Values.image }}
           ports:
-            - containerPort: 6333
+            - containerPort: {{ .Values.httpPort }}
               protocol: TCP
               name: http
-            - containerPort: 6334
+            - containerPort: {{ .Values.grpcPort }}
               protocol: TCP
               name: grpc
           env:
@@ -58,14 +58,15 @@ spec:
   selector:
     app: qdrant
   ports:
-    - port: 6333
-      targetPort: 6333
+    - port: {{ .Values.httpPort }}
+      targetPort: {{ .Values.httpPort }}
       protocol: TCP
       name: http
-    - port: 6334
-      targetPort: 6334
+    - port: {{ .Values.grpcPort }}
+      targetPort: {{ .Values.grpcPort }}
       protocol: TCP
       name: grpc
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -92,3 +93,4 @@ spec:
         - name: Content-Security-Policy
           action:
             type: Delete
+{{- end }}

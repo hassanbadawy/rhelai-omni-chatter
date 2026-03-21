@@ -1,8 +1,12 @@
 image: docker.io/lissy93/dashy:latest
 replicas: 1
+port: 8080
 theme: lissy
 
 clusterDomain: cluster-5t99k.5t99k.sandbox1248.opentlc.com
+
+route:
+  enabled: true
 
 resources:
   requests:

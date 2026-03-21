@@ -33,7 +33,7 @@ spec:
         - name: postgresql
           image: {{ .Values.image }}
           ports:
-            - containerPort: 5432
+            - containerPort: {{ .Values.port }}
               protocol: TCP
               name: postgresql
           env:
@@ -63,7 +63,24 @@ spec:
   selector:
     app: postgresql
   ports:
-    - port: 5432
-      targetPort: 5432
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       protocol: TCP
       name: postgresql
+{{- if .Values.route.enabled }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  to:
+    kind: Service
+    name: postgresql
+  port:
+    targetPort: postgresql
+  tls:
+    termination: passthrough
+{{- end }}

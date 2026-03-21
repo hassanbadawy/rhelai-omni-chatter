@@ -21,7 +21,7 @@ spec:
         - name: pgadmin
           image: {{ .Values.image }}
           ports:
-            - containerPort: 5050
+            - containerPort: {{ .Values.port }}
               protocol: TCP
               name: http
           env:
@@ -30,7 +30,7 @@ spec:
             - name: PGADMIN_DEFAULT_PASSWORD
               value: {{ .Values.password | quote }}
             - name: PGADMIN_LISTEN_PORT
-              value: "5050"
+              value: {{ .Values.port | quote }}
             - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
               value: "False"
           resources:
@@ -52,10 +52,11 @@ spec:
   selector:
     app: pgadmin
   ports:
-    - port: 5050
-      targetPort: 5050
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       protocol: TCP
       name: http
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -81,3 +82,4 @@ spec:
         - name: Content-Security-Policy
           action:
             type: Delete
+{{- end }}

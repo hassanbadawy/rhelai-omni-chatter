@@ -1,8 +1,11 @@
 apiVersion: v2
 name: swagger-ui
-description: Swagger UI for interactive API documentation on OpenShift
+description: >-
+  Swagger UI — interactive web UI for exploring and testing REST APIs.
+  Pairs with PostgREST to give you a browser-based interface for your
+  PostgreSQL tables (browse, query, insert, update) without writing code.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
 icon: https://raw.githubusercontent.com/swagger-api/swagger-ui/master/dist/favicon-32x32.png
 keywords:
@@ -10,6 +13,7 @@ keywords:
   - openapi
   - api
   - documentation
+  - postgrest
   - openshift
 maintainers:
   - name: hasanbadawy

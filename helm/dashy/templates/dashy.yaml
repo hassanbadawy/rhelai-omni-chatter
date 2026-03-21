@@ -109,7 +109,7 @@ spec:
         - name: dashy
           image: {{ .Values.image }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.port }}
               protocol: TCP
               name: http
           resources:
@@ -133,10 +133,11 @@ spec:
   selector:
     app: dashy
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       protocol: TCP
       name: http
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -153,3 +154,4 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+{{- end }}

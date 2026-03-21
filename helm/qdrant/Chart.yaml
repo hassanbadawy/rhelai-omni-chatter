@@ -2,7 +2,7 @@ apiVersion: v2
 name: qdrant
 description: Qdrant vector database for similarity search and AI applications on OpenShift
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
 icon: https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
 keywords:

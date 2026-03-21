@@ -1,5 +1,9 @@
 image: docker.io/n8nio/n8n:latest
 replicas: 1
+port: 5678
+
+route:
+  enabled: true
 
 resources:
   requests:

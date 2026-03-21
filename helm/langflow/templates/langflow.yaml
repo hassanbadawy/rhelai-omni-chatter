@@ -31,13 +31,13 @@ spec:
         - name: langflow
           image: {{ .Values.image }}
           ports:
-            - containerPort: 7860
+            - containerPort: {{ .Values.port }}
               name: http
           env:
             - name: LANGFLOW_HOST
               value: "0.0.0.0"
             - name: LANGFLOW_PORT
-              value: "7860"
+              value: {{ .Values.port | quote }}
             - name: HOME
               value: "/app/data"
             - name: LANGFLOW_CONFIG_DIR
@@ -60,7 +60,7 @@ spec:
           startupProbe:
             httpGet:
               path: /health
-              port: 7860
+              port: {{ .Values.port }}
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -68,14 +68,14 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 7860
+              port: {{ .Values.port }}
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
-              port: 7860
+              port: {{ .Values.port }}
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
@@ -99,9 +99,10 @@ spec:
   selector:
     app: langflow
   ports:
-    - port: 7860
-      targetPort: 7860
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       name: http
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -118,3 +119,4 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+{{- end }}

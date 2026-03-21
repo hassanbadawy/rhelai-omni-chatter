@@ -20,7 +20,7 @@ spec:
         - name: postgrest
           image: {{ .Values.image }}
           ports:
-            - containerPort: 3000
+            - containerPort: {{ .Values.port }}
               protocol: TCP
               name: http
           env:
@@ -31,7 +31,7 @@ spec:
             - name: PGRST_DB_SCHEMAS
               value: "public"
             - name: PGRST_SERVER_PORT
-              value: "3000"
+              value: {{ .Values.port | quote }}
             - name: PGRST_OPENAPI_MODE
               value: "follow-privileges"
           resources:
@@ -47,10 +47,11 @@ spec:
   selector:
     app: postgrest
   ports:
-    - port: 3000
-      targetPort: 3000
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       protocol: TCP
       name: http
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -67,3 +68,4 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+{{- end }}

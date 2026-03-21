@@ -20,11 +20,11 @@ spec:
         - name: n8n
           image: {{ .Values.image }}
           ports:
-            - containerPort: 5678
+            - containerPort: {{ .Values.port }}
               protocol: TCP
           env:
             - name: N8N_PORT
-              value: "5678"
+              value: {{ .Values.port | quote }}
             - name: N8N_SECURE_COOKIE
               value: "false"
             - name: N8N_USER_FOLDER
@@ -56,9 +56,10 @@ spec:
   selector:
     app: n8n
   ports:
-    - port: 5678
-      targetPort: 5678
+    - port: {{ .Values.port }}
+      targetPort: {{ .Values.port }}
       protocol: TCP
+{{- if .Values.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -72,7 +73,7 @@ spec:
     name: n8n
     weight: 100
   port:
-    targetPort: 5678
+    targetPort: {{ .Values.port }}
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
@@ -85,3 +86,4 @@ spec:
         - name: Content-Security-Policy
           action:
             type: Delete
+{{- end }}

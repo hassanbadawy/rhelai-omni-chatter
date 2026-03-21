@@ -10,6 +10,9 @@ vllm:
 
 configDir: /opt/app-root/src/.llama/distributions/rh
 
+route:
+  enabled: true
+
 resources:
   requests:
     cpu: "250m"

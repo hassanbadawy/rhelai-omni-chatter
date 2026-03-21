@@ -2,9 +2,9 @@ apiVersion: v2
 name: llama-stack
 description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution with SQLite storage, vLLM inference)
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "1.0.0"
-icon: https://raw.githubusercontent.com/meta-llama/llama-stack/main/docs/resources/logo.svg
+icon: https://avatars.githubusercontent.com/u/151674099
 keywords:
   - llama-stack
   - ai

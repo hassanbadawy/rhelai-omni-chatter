@@ -1,7 +1,12 @@
 image: docker.io/swaggerapi/swagger-ui:latest
 replicas: 1
+port: 8080
 
+# URL of the PostgREST (or any OpenAPI) endpoint to visualize
 apiUrl: "https://postgrest-langflow.apps.example.com/"
+
+route:
+  enabled: true
 
 resources:
   requests:
