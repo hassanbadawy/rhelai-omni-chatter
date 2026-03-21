@@ -1,0 +1,224 @@
+{{- if .Values.llamaStack.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama-stack-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    llamastack.io/distribution: llama-stack
+    opendatahub.io/dashboard: "true"
+data:
+  config.yaml: |
+    version: "2"
+    image_name: rh
+    apis:
+    - agents
+    - datasetio
+    - eval
+    - files
+    - inference
+    - safety
+    - scoring
+    - tool_runtime
+    - vector_io
+    providers:
+      inference:
+      - provider_id: sentence-transformers
+        provider_type: inline::sentence-transformers
+        config: {}
+      - provider_id: vllm
+        provider_type: remote::vllm
+        config:
+          base_url: {{ .Values.llamaStack.vllm.url }}
+          api_token: {{ .Values.llamaStack.vllm.apiToken }}
+          tls_verify: {{ .Values.llamaStack.vllm.tlsVerify }}
+          max_tokens: {{ .Values.llamaStack.vllm.maxTokens }}
+      vector_io:
+      - provider_id: milvus
+        provider_type: inline::milvus
+        config:
+          db_path: {{ .Values.llamaStack.configDir }}/milvus.db
+          kvstore:
+            backend: default
+            namespace: "milvus"
+          persistence:
+            backend: default
+            namespace: "milvus_persistence"
+      agents:
+      - provider_id: meta-reference
+        provider_type: inline::meta-reference
+        config:
+          persistence:
+            agent_state:
+              backend: default
+              namespace: "agent_state"
+            responses:
+              backend: sql
+              namespace: "agents"
+              table_name: "responses"
+      eval:
+      - provider_id: meta-reference
+        provider_type: inline::meta-reference
+        config:
+          kvstore:
+            backend: default
+            namespace: "eval"
+      safety:
+      - provider_id: llama-guard
+        provider_type: inline::llama-guard
+        config: {}
+      files:
+      - provider_id: meta-reference-files
+        provider_type: inline::localfs
+        config:
+          metadata_store:
+            backend: sql
+            namespace: "files"
+            table_name: "files_metadata"
+          storage_dir: {{ .Values.llamaStack.configDir }}/files
+      datasetio:
+      - provider_id: huggingface
+        provider_type: remote::huggingface
+        config:
+          kvstore:
+            backend: default
+            namespace: "huggingface"
+      - provider_id: localfs
+        provider_type: inline::localfs
+        config:
+          kvstore:
+            backend: default
+            namespace: "localfs"
+      scoring:
+      - provider_id: basic
+        provider_type: inline::basic
+        config: {}
+      - provider_id: llm-as-judge
+        provider_type: inline::llm-as-judge
+        config: {}
+      tool_runtime:
+      - provider_id: rag-runtime
+        provider_type: inline::rag-runtime
+        config: {}
+      - provider_id: model-context-protocol
+        provider_type: remote::model-context-protocol
+        config: {}
+    metadata_store:
+      backend: default
+      namespace: "metadata"
+    storage:
+      backends:
+        default:
+          type: kv_sqlite
+          db_path: {{ .Values.llamaStack.configDir }}/storage.db
+          namespace: null
+        kv_default:
+          type: kv_sqlite
+          db_path: {{ .Values.llamaStack.configDir }}/storage.db
+          namespace: null
+        sql:
+          type: sql_sqlite
+          db_path: {{ .Values.llamaStack.configDir }}/sql_storage.db
+      stores:
+        metadata:
+          backend: default
+          namespace: "llama-stack"
+        conversations:
+          backend: sql
+          namespace: "conversations"
+          table_name: "conversations"
+        inference:
+          backend: sql
+          namespace: "inference"
+          table_name: "inference"
+        prompts:
+          backend: kv_default
+          namespace: "prompts"
+    models:
+    - provider_id: sentence-transformers
+      model_id: {{ .Values.llamaStack.embedding.modelId }}
+      provider_model_id: {{ .Values.llamaStack.embedding.providerModelId }}
+      model_type: embedding
+      metadata:
+        embedding_dimension: {{ .Values.llamaStack.embedding.dimension }}
+    shields: []
+    vector_dbs: []
+    datasets: []
+    scoring_fns: []
+    benchmarks: []
+    tool_groups:
+    - toolgroup_id: builtin::rag
+      provider_id: rag-runtime
+    server:
+      port: {{ .Values.llamaStack.port }}
+---
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: llama-stack
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.llamaStack.replicas }}
+  server:
+    distribution:
+      name: {{ .Values.llamaStack.distribution }}
+    userConfig:
+      configMapName: llama-stack-config
+    containerSpec:
+      command:
+        - /bin/sh
+        - "-c"
+        - llama stack run /etc/llama-stack/config.yaml
+      port: {{ .Values.llamaStack.port }}
+      env:
+        - name: VLLM_URL
+          value: {{ .Values.llamaStack.vllm.url | quote }}
+        - name: VLLM_API_TOKEN
+          value: {{ .Values.llamaStack.vllm.apiToken | quote }}
+        - name: VLLM_TLS_VERIFY
+          value: {{ .Values.llamaStack.vllm.tlsVerify | quote }}
+        - name: VLLM_MAX_TOKENS
+          value: {{ .Values.llamaStack.vllm.maxTokens | quote }}
+        - name: LLAMA_STACK_CONFIG_DIR
+          value: {{ .Values.llamaStack.configDir }}
+      resources:
+        {{- toYaml .Values.llamaStack.resources | nindent 8 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: llama-stack-allow-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: llama-stack
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+        - podSelector: {}
+      ports:
+        - port: {{ .Values.llamaStack.port }}
+          protocol: TCP
+  policyTypes:
+    - Ingress
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: llama-stack
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: llama-stack
+spec:
+  to:
+    kind: Service
+    name: llama-stack-service
+  port:
+    targetPort: {{ .Values.llamaStack.port }}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

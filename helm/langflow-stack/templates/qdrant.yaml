@@ -1,0 +1,93 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdrant
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qdrant
+    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.openshift.io/runtime: qdrant
+spec:
+  replicas: {{ .Values.qdrant.replicas }}
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+    spec:
+      containers:
+        - name: qdrant
+          image: {{ .Values.qdrant.image }}
+          ports:
+            - containerPort: 6333
+              protocol: TCP
+              name: http
+            - containerPort: 6334
+              protocol: TCP
+              name: grpc
+          env:
+            - name: QDRANT__STORAGE__STORAGE_PATH
+              value: /tmp/qdrant/storage
+            - name: QDRANT__STORAGE__SNAPSHOTS_PATH
+              value: /tmp/qdrant/snapshots
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+          volumeMounts:
+            - name: qdrant-data
+              mountPath: /tmp/qdrant
+          securityContext:
+            {{- include "langflow-stack.securityContext" . | nindent 12 }}
+      volumes:
+        - name: qdrant-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qdrant
+spec:
+  selector:
+    app: qdrant
+  ports:
+    - port: 6333
+      targetPort: 6333
+      protocol: TCP
+      name: http
+    - port: 6334
+      targetPort: 6334
+      protocol: TCP
+      name: grpc
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: qdrant
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: qdrant
+spec:
+  to:
+    kind: Service
+    name: qdrant
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
+{{- end }}

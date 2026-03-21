@@ -1,0 +1,86 @@
+{{- if .Values.n8n.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: n8n
+    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.openshift.io/runtime: nodejs
+spec:
+  replicas: {{ .Values.n8n.replicas }}
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      containers:
+        - name: n8n
+          image: {{ .Values.n8n.image }}
+          ports:
+            - containerPort: 5678
+              protocol: TCP
+          env:
+            - name: N8N_PORT
+              value: "5678"
+            - name: N8N_SECURE_COOKIE
+              value: "false"
+            - name: N8N_USER_FOLDER
+              value: /tmp/n8n
+          resources:
+            {{- toYaml .Values.n8n.resources | nindent 12 }}
+          volumeMounts:
+            - name: n8n-data
+              mountPath: /tmp/n8n
+          securityContext:
+            {{- include "langflow-stack.securityContext" . | nindent 12 }}
+      volumes:
+        - name: n8n-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: n8n
+spec:
+  selector:
+    app: n8n
+  ports:
+    - port: 5678
+      targetPort: 5678
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: n8n
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: n8n
+spec:
+  to:
+    kind: Service
+    name: n8n
+    weight: 100
+  port:
+    targetPort: 5678
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  httpHeaders:
+    actions:
+      response:
+        - name: X-Frame-Options
+          action:
+            type: Delete
+        - name: Content-Security-Policy
+          action:
+            type: Delete
+{{- end }}

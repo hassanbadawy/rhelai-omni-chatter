@@ -1,0 +1,74 @@
+{{- if .Values.postgrest.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgrest
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgrest
+    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.openshift.io/runtime: golang
+spec:
+  replicas: {{ .Values.postgrest.replicas }}
+  selector:
+    matchLabels:
+      app: postgrest
+  template:
+    metadata:
+      labels:
+        app: postgrest
+    spec:
+      containers:
+        - name: postgrest
+          image: {{ .Values.postgrest.image }}
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+              name: http
+          env:
+            - name: PGRST_DB_URI
+              value: "postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql.{{ .Release.Namespace }}.svc:5432/{{ .Values.postgresql.database }}"
+            - name: PGRST_DB_ANON_ROLE
+              value: {{ .Values.postgresql.user | quote }}
+            - name: PGRST_DB_SCHEMAS
+              value: "public"
+            - name: PGRST_SERVER_PORT
+              value: "3000"
+            - name: PGRST_OPENAPI_MODE
+              value: "follow-privileges"
+          resources:
+            {{- toYaml .Values.postgrest.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgrest
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgrest
+spec:
+  selector:
+    app: postgrest
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: postgrest
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgrest
+spec:
+  to:
+    kind: Service
+    name: postgrest
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

@@ -1,6 +1,6 @@
 # oc login
-export CLUSTER_DOMAIN=ocp.8r4k4.sandbox235.opentlc.com
-oc login -u admin -p REDACTED https://api.ocp.8r4k4.sandbox235.opentlc.com:6443
+export CLUSTER_DOMAIN=cluster-5t99k.5t99k.sandbox1248.opentlc.com
+oc login -u kubeadmin -p ${OC_PASSWORD} https://api.${CLUSTER_DOMAIN}:6443
 
 # delete previous deployments if exists
 oc delete deployment pocketbase -n langflow --ignore-not-found

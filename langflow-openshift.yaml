@@ -1,7 +1,22 @@
+# =============================================================================
+# CHANGE THESE VALUES TO MATCH YOUR CLUSTER
+# Then find-and-replace the old values throughout this file:
+#   1. NAMESPACE:      langflow  (appears as namespace: langflow)
+#   2. CLUSTER_DOMAIN: cluster-5t99k.5t99k.sandbox1248.opentlc.com
+# =============================================================================
 apiVersion: v1
 kind: Namespace
 metadata:
   name: langflow
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config
+  namespace: langflow
+data:
+  CLUSTER_DOMAIN: cluster-5t99k.5t99k.sandbox1248.opentlc.com
+  NAMESPACE: langflow
 ---
 # =============================================================================
 # Langflow - Visual LLM flow builder (port 7860)
@@ -864,7 +879,7 @@ spec:
               name: http
           env:
             - name: API_URL
-              value: "https://postgrest-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/"
+              value: "https://postgrest-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/"
           resources:
             requests:
               cpu: 100m
@@ -935,7 +950,7 @@ data:
       startingView: workspace
       defaultOpeningMethod: workspace
       enableMultiTasking: true
-      workspaceLandingUrl: https://langflow-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+      workspaceLandingUrl: https://langflow-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
       statusCheck: false
       disableConfiguration: false
     sections:
@@ -944,12 +959,12 @@ data:
         items:
           - title: Langflow
             description: Visual LLM flow builder
-            url: https://langflow-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            url: https://langflow-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
             icon: fas fa-project-diagram
             target: workspace
           - title: Llama Stack API
             description: Inference, RAG, agents, safety
-            url: https://llama-stack-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/docs
+            url: https://llama-stack-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/docs
             icon: fas fa-server
             target: workspace
       - name: Automation
@@ -957,7 +972,7 @@ data:
         items:
           - title: n8n
             description: Workflow automation
-            url: https://n8n-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            url: https://n8n-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
             icon: fas fa-sitemap
             target: workspace
       - name: Qdrant
@@ -965,27 +980,27 @@ data:
         items:
           - title: Dashboard
             description: Qdrant overview
-            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/welcome
+            url: https://qdrant-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/dashboard#/welcome
             icon: fas fa-tachometer-alt
             target: workspace
           - title: Console
             description: Query console
-            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/console
+            url: https://qdrant-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/dashboard#/console
             icon: fas fa-terminal
             target: workspace
           - title: Collections
             description: Vector collections
-            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/collections
+            url: https://qdrant-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/dashboard#/collections
             icon: fas fa-layer-group
             target: workspace
           - title: Datasets
             description: Manage datasets
-            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/datasets
+            url: https://qdrant-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/dashboard#/datasets
             icon: fas fa-th-list
             target: workspace
           - title: Tutorial
             description: Getting started guide
-            url: https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard#/tutorial
+            url: https://qdrant-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com/dashboard#/tutorial
             icon: fas fa-graduation-cap
             target: workspace
       - name: Database
@@ -993,17 +1008,17 @@ data:
         items:
           - title: pgAdmin
             description: PostgreSQL web admin
-            url: https://pgadmin-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            url: https://pgadmin-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
             icon: fas fa-elephant
             target: workspace
           - title: Swagger UI
             description: PostgREST API docs
-            url: https://swagger-ui-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            url: https://swagger-ui-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
             icon: fas fa-file-code
             target: workspace
           - title: PostgREST
             description: REST API for PostgreSQL
-            url: https://postgrest-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com
+            url: https://postgrest-langflow.apps.cluster-5t99k.5t99k.sandbox1248.opentlc.com
             icon: fas fa-plug
             target: workspace
 ---

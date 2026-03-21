@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-config
+  namespace: {{ .Release.Namespace }}
+data:
+  CLUSTER_DOMAIN: {{ .Values.clusterDomain }}
+  NAMESPACE: {{ .Release.Namespace }}

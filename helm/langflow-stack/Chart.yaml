@@ -1,0 +1,16 @@
+apiVersion: v2
+name: langflow-stack
+description: A Helm chart for deploying Langflow AI Platform on OpenShift (Langflow, Llama Stack, Qdrant, n8n, PostgreSQL, PostgREST, Swagger UI, pgAdmin, Dashy)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - langflow
+  - llama-stack
+  - openshift
+  - ai
+  - qdrant
+  - n8n
+  - postgresql
+maintainers:
+  - name: hasanbadawy

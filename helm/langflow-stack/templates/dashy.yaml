@@ -1,0 +1,161 @@
+{{- if .Values.dashy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashy-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: dashy
+data:
+  conf.yml: |
+    pageInfo:
+      title: Langflow Stack
+      description: AI Platform Dashboard
+    appConfig:
+      theme: {{ .Values.dashy.theme }}
+      startingView: workspace
+      defaultOpeningMethod: workspace
+      enableMultiTasking: true
+      workspaceLandingUrl: https://langflow-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+      statusCheck: false
+      disableConfiguration: false
+    sections:
+      - name: AI Platform
+        icon: fas fa-brain
+        items:
+          - title: Langflow
+            description: Visual LLM flow builder
+            url: https://langflow-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+            icon: fas fa-project-diagram
+            target: workspace
+          - title: Llama Stack API
+            description: Inference, RAG, agents, safety
+            url: https://llama-stack-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/docs
+            icon: fas fa-server
+            target: workspace
+      - name: Automation
+        icon: fas fa-cogs
+        items:
+          - title: n8n
+            description: Workflow automation
+            url: https://n8n-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+            icon: fas fa-sitemap
+            target: workspace
+      - name: Qdrant
+        icon: fas fa-database
+        items:
+          - title: Dashboard
+            description: Qdrant overview
+            url: https://qdrant-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/dashboard#/welcome
+            icon: fas fa-tachometer-alt
+            target: workspace
+          - title: Console
+            description: Query console
+            url: https://qdrant-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/dashboard#/console
+            icon: fas fa-terminal
+            target: workspace
+          - title: Collections
+            description: Vector collections
+            url: https://qdrant-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/dashboard#/collections
+            icon: fas fa-layer-group
+            target: workspace
+          - title: Datasets
+            description: Manage datasets
+            url: https://qdrant-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/dashboard#/datasets
+            icon: fas fa-th-list
+            target: workspace
+          - title: Tutorial
+            description: Getting started guide
+            url: https://qdrant-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}/dashboard#/tutorial
+            icon: fas fa-graduation-cap
+            target: workspace
+      - name: Database
+        icon: fas fa-table
+        items:
+          - title: pgAdmin
+            description: PostgreSQL web admin
+            url: https://pgadmin-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+            icon: fas fa-elephant
+            target: workspace
+          - title: Swagger UI
+            description: PostgREST API docs
+            url: https://swagger-ui-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+            icon: fas fa-file-code
+            target: workspace
+          - title: PostgREST
+            description: REST API for PostgreSQL
+            url: https://postgrest-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+            icon: fas fa-plug
+            target: workspace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: dashy
+    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.openshift.io/runtime: nodejs
+spec:
+  replicas: {{ .Values.dashy.replicas }}
+  selector:
+    matchLabels:
+      app: dashy
+  template:
+    metadata:
+      labels:
+        app: dashy
+    spec:
+      serviceAccountName: dashy-sa
+      containers:
+        - name: dashy
+          image: {{ .Values.dashy.image }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+          resources:
+            {{- toYaml .Values.dashy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/user-data/conf.yml
+              subPath: conf.yml
+      volumes:
+        - name: config
+          configMap:
+            name: dashy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: dashy
+spec:
+  selector:
+    app: dashy
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dashy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: dashy
+spec:
+  to:
+    kind: Service
+    name: dashy
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}
