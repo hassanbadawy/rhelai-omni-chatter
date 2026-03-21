@@ -1,5 +1,45 @@
 apiVersion: v1
 entries:
+  dashy:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:29.529413169Z"
+    description: Dashy dashboard with workspace view for managing AI platform services
+      on OpenShift
+    digest: b21407476f2267be66817009705d3dc96188c0948b4f493d8dc6162553562ce8
+    icon: https://raw.githubusercontent.com/Lissy93/dashy/master/public/web-icons/dashy-logo.png
+    keywords:
+    - dashy
+    - dashboard
+    - ui
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: dashy
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/dashy-0.1.0/dashy-0.1.0.tgz
+    version: 0.1.0
+  langflow:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:29.627930004Z"
+    description: Visual LLM flow builder for creating and deploying AI workflows on
+      OpenShift
+    digest: e80b9b3d155423c34f0ac1689054d747c578b3a14bb141182541da9bbca3cff0
+    icon: https://raw.githubusercontent.com/langflow-ai/langflow/main/docs/static/img/hero.png
+    keywords:
+    - langflow
+    - ai
+    - llm
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: langflow
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/langflow-0.1.0/langflow-0.1.0.tgz
+    version: 0.1.0
   langflow-stack:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -22,4 +62,150 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/langflow-stack-0.1.0/langflow-stack-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-21T15:40:34.907837143Z"
+  llama-stack:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-03-21T15:49:29.75919966Z"
+    description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
+      with SQLite storage, vLLM inference)
+    digest: a6d7159df0c603221cbfb965eccfeed347d0ae121bf2d088a236474ae93a2465
+    icon: https://raw.githubusercontent.com/meta-llama/llama-stack/main/docs/resources/logo.svg
+    keywords:
+    - llama-stack
+    - ai
+    - inference
+    - rag
+    - agents
+    - openshift
+    - rhoai
+    maintainers:
+    - name: hasanbadawy
+    name: llama-stack
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-0.1.0/llama-stack-0.1.0.tgz
+    version: 0.1.0
+  n8n:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:29.859584352Z"
+    description: n8n workflow automation platform for AI and integration workflows
+      on OpenShift
+    digest: ebbfb2a89b50180ae3cd44c061aeab9c38ab4cc72781e434ee3de4226aaaa15e
+    icon: https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-logo.png
+    keywords:
+    - n8n
+    - workflow
+    - automation
+    - integration
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: n8n
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/n8n-0.1.0/n8n-0.1.0.tgz
+    version: 0.1.0
+  pgadmin:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:29.993622115Z"
+    description: pgAdmin 4 web-based PostgreSQL administration tool for OpenShift
+    digest: 4d89348315d0d0e8e3f8b14b5161c7c229f987c2272e423500f14af4ce754ee8
+    icon: https://www.pgadmin.org/static/COMPILED/assets/img/logo-right-128.png
+    keywords:
+    - pgadmin
+    - postgresql
+    - database
+    - admin
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: pgadmin
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/pgadmin-0.1.0/pgadmin-0.1.0.tgz
+    version: 0.1.0
+  postgresql:
+  - apiVersion: v2
+    appVersion: "16"
+    created: "2026-03-21T15:49:30.082179217Z"
+    description: PostgreSQL 16 database on Red Hat UBI for OpenShift with persistent
+      storage
+    digest: e82cdd92d0ef477f6e7810e416f3dcfb4d8fe9a6289b42a28a4f2eb757c3a79d
+    icon: https://wiki.postgresql.org/images/a/a4/PostgreSQL_logo.3colors.svg
+    keywords:
+    - postgresql
+    - database
+    - sql
+    - openshift
+    - rhel
+    maintainers:
+    - name: hasanbadawy
+    name: postgresql
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/postgresql-0.1.0/postgresql-0.1.0.tgz
+    version: 0.1.0
+  postgrest:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:30.19878637Z"
+    description: PostgREST auto-generated RESTful API for PostgreSQL on OpenShift
+    digest: e25abefcd367d32a5b95dcd3a7beb49b7ca4004c8ea093a05f0ac57db517c06c
+    icon: https://postgrest.org/en/stable/_static/logo.png
+    keywords:
+    - postgrest
+    - postgresql
+    - rest
+    - api
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: postgrest
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/postgrest-0.1.0/postgrest-0.1.0.tgz
+    version: 0.1.0
+  qdrant:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:30.298347508Z"
+    description: Qdrant vector database for similarity search and AI applications
+      on OpenShift
+    digest: a6dd3919fb709dbbfc6db0f01c4b2d624fe9466553ebd44ddbaada5cfe234960
+    icon: https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
+    keywords:
+    - qdrant
+    - vector-database
+    - ai
+    - embeddings
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: qdrant
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
+    version: 0.1.0
+  swagger-ui:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-21T15:49:30.404091046Z"
+    description: Swagger UI for interactive API documentation on OpenShift
+    digest: be2f0748d6e04d1790d5e6bf89e4fa9e6033c820f04b6cf0b29e52520eeee7b7
+    icon: https://raw.githubusercontent.com/swagger-api/swagger-ui/master/dist/favicon-32x32.png
+    keywords:
+    - swagger
+    - openapi
+    - api
+    - documentation
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: swagger-ui
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/swagger-ui-0.1.0/swagger-ui-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-03-21T15:49:30.404105883Z"
