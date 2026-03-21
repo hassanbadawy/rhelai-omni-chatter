@@ -1,15 +1,13 @@
-{{- if .Values.pgadmin.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pgadmin
-  namespace: {{ .Release.Namespace }}
   labels:
     app: pgadmin
-    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: langflow-stack
     app.openshift.io/runtime: postgresql
 spec:
-  replicas: {{ .Values.pgadmin.replicas }}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: pgadmin
@@ -21,22 +19,22 @@ spec:
       serviceAccountName: pgadmin-sa
       containers:
         - name: pgadmin
-          image: {{ .Values.pgadmin.image }}
+          image: {{ .Values.image }}
           ports:
             - containerPort: 5050
               protocol: TCP
               name: http
           env:
             - name: PGADMIN_DEFAULT_EMAIL
-              value: {{ .Values.pgadmin.email | quote }}
+              value: {{ .Values.email | quote }}
             - name: PGADMIN_DEFAULT_PASSWORD
-              value: {{ .Values.pgadmin.password | quote }}
+              value: {{ .Values.password | quote }}
             - name: PGADMIN_LISTEN_PORT
               value: "5050"
             - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
               value: "False"
           resources:
-            {{- toYaml .Values.pgadmin.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: pgadmin-data
               mountPath: /var/lib/pgadmin
@@ -48,7 +46,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pgadmin
-  namespace: {{ .Release.Namespace }}
   labels:
     app: pgadmin
 spec:
@@ -64,7 +61,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: pgadmin
-  namespace: {{ .Release.Namespace }}
   labels:
     app: pgadmin
 spec:
@@ -85,4 +81,3 @@ spec:
         - name: Content-Security-Policy
           action:
             type: Delete
-{{- end }}

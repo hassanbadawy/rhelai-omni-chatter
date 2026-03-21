@@ -1,9 +1,7 @@
-{{- if .Values.llamaStack.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: llama-stack-config
-  namespace: {{ .Release.Namespace }}
   labels:
     llamastack.io/distribution: llama-stack
     opendatahub.io/dashboard: "true"
@@ -29,15 +27,15 @@ data:
       - provider_id: vllm
         provider_type: remote::vllm
         config:
-          base_url: {{ .Values.llamaStack.vllm.url }}
-          api_token: {{ .Values.llamaStack.vllm.apiToken }}
-          tls_verify: {{ .Values.llamaStack.vllm.tlsVerify }}
-          max_tokens: {{ .Values.llamaStack.vllm.maxTokens }}
+          base_url: {{ .Values.vllm.url }}
+          api_token: {{ .Values.vllm.apiToken }}
+          tls_verify: {{ .Values.vllm.tlsVerify }}
+          max_tokens: {{ .Values.vllm.maxTokens }}
       vector_io:
       - provider_id: milvus
         provider_type: inline::milvus
         config:
-          db_path: {{ .Values.llamaStack.configDir }}/milvus.db
+          db_path: {{ .Values.configDir }}/milvus.db
           kvstore:
             backend: default
             namespace: "milvus"
@@ -75,7 +73,7 @@ data:
             backend: sql
             namespace: "files"
             table_name: "files_metadata"
-          storage_dir: {{ .Values.llamaStack.configDir }}/files
+          storage_dir: {{ .Values.configDir }}/files
       datasetio:
       - provider_id: huggingface
         provider_type: remote::huggingface
@@ -110,15 +108,15 @@ data:
       backends:
         default:
           type: kv_sqlite
-          db_path: {{ .Values.llamaStack.configDir }}/storage.db
+          db_path: {{ .Values.configDir }}/storage.db
           namespace: null
         kv_default:
           type: kv_sqlite
-          db_path: {{ .Values.llamaStack.configDir }}/storage.db
+          db_path: {{ .Values.configDir }}/storage.db
           namespace: null
         sql:
           type: sql_sqlite
-          db_path: {{ .Values.llamaStack.configDir }}/sql_storage.db
+          db_path: {{ .Values.configDir }}/sql_storage.db
       stores:
         metadata:
           backend: default
@@ -136,11 +134,11 @@ data:
           namespace: "prompts"
     models:
     - provider_id: sentence-transformers
-      model_id: {{ .Values.llamaStack.embedding.modelId }}
-      provider_model_id: {{ .Values.llamaStack.embedding.providerModelId }}
+      model_id: {{ .Values.embedding.modelId }}
+      provider_model_id: {{ .Values.embedding.providerModelId }}
       model_type: embedding
       metadata:
-        embedding_dimension: {{ .Values.llamaStack.embedding.dimension }}
+        embedding_dimension: {{ .Values.embedding.dimension }}
     shields: []
     vector_dbs: []
     datasets: []
@@ -150,18 +148,17 @@ data:
     - toolgroup_id: builtin::rag
       provider_id: rag-runtime
     server:
-      port: {{ .Values.llamaStack.port }}
+      port: {{ .Values.port }}
 ---
 apiVersion: llamastack.io/v1alpha1
 kind: LlamaStackDistribution
 metadata:
   name: llama-stack
-  namespace: {{ .Release.Namespace }}
 spec:
-  replicas: {{ .Values.llamaStack.replicas }}
+  replicas: {{ .Values.replicas }}
   server:
     distribution:
-      name: {{ .Values.llamaStack.distribution }}
+      name: {{ .Values.distribution }}
     userConfig:
       configMapName: llama-stack-config
     containerSpec:
@@ -169,26 +166,25 @@ spec:
         - /bin/sh
         - "-c"
         - llama stack run /etc/llama-stack/config.yaml
-      port: {{ .Values.llamaStack.port }}
+      port: {{ .Values.port }}
       env:
         - name: VLLM_URL
-          value: {{ .Values.llamaStack.vllm.url | quote }}
+          value: {{ .Values.vllm.url | quote }}
         - name: VLLM_API_TOKEN
-          value: {{ .Values.llamaStack.vllm.apiToken | quote }}
+          value: {{ .Values.vllm.apiToken | quote }}
         - name: VLLM_TLS_VERIFY
-          value: {{ .Values.llamaStack.vllm.tlsVerify | quote }}
+          value: {{ .Values.vllm.tlsVerify | quote }}
         - name: VLLM_MAX_TOKENS
-          value: {{ .Values.llamaStack.vllm.maxTokens | quote }}
+          value: {{ .Values.vllm.maxTokens | quote }}
         - name: LLAMA_STACK_CONFIG_DIR
-          value: {{ .Values.llamaStack.configDir }}
+          value: {{ .Values.configDir }}
       resources:
-        {{- toYaml .Values.llamaStack.resources | nindent 8 }}
+        {{- toYaml .Values.resources | nindent 8 }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: llama-stack-allow-ingress
-  namespace: {{ .Release.Namespace }}
 spec:
   podSelector:
     matchLabels:
@@ -200,7 +196,7 @@ spec:
               network.openshift.io/policy-group: ingress
         - podSelector: {}
       ports:
-        - port: {{ .Values.llamaStack.port }}
+        - port: {{ .Values.port }}
           protocol: TCP
   policyTypes:
     - Ingress
@@ -209,7 +205,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: llama-stack
-  namespace: {{ .Release.Namespace }}
   labels:
     app: llama-stack
 spec:
@@ -217,8 +212,7 @@ spec:
     kind: Service
     name: llama-stack-service
   port:
-    targetPort: {{ .Values.llamaStack.port }}
+    targetPort: {{ .Values.port }}
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
-{{- end }}

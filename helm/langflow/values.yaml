@@ -1,0 +1,13 @@
+image: langflowai/langflow:latest
+replicas: 1
+storage: 1Gi
+
+autoLogin: "true"
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi

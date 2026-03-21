@@ -1,0 +1,15 @@
+apiVersion: v2
+name: n8n
+description: n8n workflow automation platform for AI and integration workflows on OpenShift
+type: application
+version: 0.1.0
+appVersion: "latest"
+icon: https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-logo.png
+keywords:
+  - n8n
+  - workflow
+  - automation
+  - integration
+  - openshift
+maintainers:
+  - name: hasanbadawy

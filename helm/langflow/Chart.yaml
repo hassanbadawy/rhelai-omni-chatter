@@ -1,0 +1,14 @@
+apiVersion: v2
+name: langflow
+description: Visual LLM flow builder for creating and deploying AI workflows on OpenShift
+type: application
+version: 0.1.0
+appVersion: "latest"
+icon: https://raw.githubusercontent.com/langflow-ai/langflow/main/docs/static/img/hero.png
+keywords:
+  - langflow
+  - ai
+  - llm
+  - openshift
+maintainers:
+  - name: hasanbadawy

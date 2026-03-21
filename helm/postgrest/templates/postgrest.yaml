@@ -1,15 +1,13 @@
-{{- if .Values.postgrest.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgrest
-  namespace: {{ .Release.Namespace }}
   labels:
     app: postgrest
-    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: langflow-stack
     app.openshift.io/runtime: golang
 spec:
-  replicas: {{ .Values.postgrest.replicas }}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: postgrest
@@ -20,14 +18,14 @@ spec:
     spec:
       containers:
         - name: postgrest
-          image: {{ .Values.postgrest.image }}
+          image: {{ .Values.image }}
           ports:
             - containerPort: 3000
               protocol: TCP
               name: http
           env:
             - name: PGRST_DB_URI
-              value: "postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql.{{ .Release.Namespace }}.svc:5432/{{ .Values.postgresql.database }}"
+              value: "postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@{{ .Values.postgresql.host }}.{{ .Release.Namespace }}.svc:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}"
             - name: PGRST_DB_ANON_ROLE
               value: {{ .Values.postgresql.user | quote }}
             - name: PGRST_DB_SCHEMAS
@@ -37,13 +35,12 @@ spec:
             - name: PGRST_OPENAPI_MODE
               value: "follow-privileges"
           resources:
-            {{- toYaml .Values.postgrest.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12 }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgrest
-  namespace: {{ .Release.Namespace }}
   labels:
     app: postgrest
 spec:
@@ -59,7 +56,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: postgrest
-  namespace: {{ .Release.Namespace }}
   labels:
     app: postgrest
 spec:
@@ -71,4 +67,3 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
-{{- end }}

@@ -1,0 +1,17 @@
+image: docker.io/postgrest/postgrest:latest
+replicas: 1
+
+postgresql:
+  host: postgresql
+  port: 5432
+  user: app_user
+  password: password
+  database: appdb
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

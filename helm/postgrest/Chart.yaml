@@ -1,0 +1,15 @@
+apiVersion: v2
+name: postgrest
+description: PostgREST auto-generated RESTful API for PostgreSQL on OpenShift
+type: application
+version: 0.1.0
+appVersion: "latest"
+icon: https://postgrest.org/en/stable/_static/logo.png
+keywords:
+  - postgrest
+  - postgresql
+  - rest
+  - api
+  - openshift
+maintainers:
+  - name: hasanbadawy

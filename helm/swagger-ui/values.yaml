@@ -1,0 +1,12 @@
+image: docker.io/swaggerapi/swagger-ui:latest
+replicas: 1
+
+apiUrl: "https://postgrest-langflow.apps.example.com/"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

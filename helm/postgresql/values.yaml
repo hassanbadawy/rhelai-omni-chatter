@@ -1,0 +1,15 @@
+image: registry.redhat.io/rhel9/postgresql-16:latest
+replicas: 1
+storage: 5Gi
+
+user: app_user
+password: password
+database: appdb
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi

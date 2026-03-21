@@ -1,9 +1,7 @@
-{{- if .Values.dashy.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: dashy-config
-  namespace: {{ .Release.Namespace }}
   labels:
     app: dashy
 data:
@@ -12,7 +10,7 @@ data:
       title: Langflow Stack
       description: AI Platform Dashboard
     appConfig:
-      theme: {{ .Values.dashy.theme }}
+      theme: {{ .Values.theme }}
       startingView: workspace
       defaultOpeningMethod: workspace
       enableMultiTasking: true
@@ -92,13 +90,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dashy
-  namespace: {{ .Release.Namespace }}
   labels:
     app: dashy
-    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: langflow-stack
     app.openshift.io/runtime: nodejs
 spec:
-  replicas: {{ .Values.dashy.replicas }}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: dashy
@@ -110,13 +107,13 @@ spec:
       serviceAccountName: dashy-sa
       containers:
         - name: dashy
-          image: {{ .Values.dashy.image }}
+          image: {{ .Values.image }}
           ports:
             - containerPort: 8080
               protocol: TCP
               name: http
           resources:
-            {{- toYaml .Values.dashy.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: config
               mountPath: /app/user-data/conf.yml
@@ -130,7 +127,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: dashy
-  namespace: {{ .Release.Namespace }}
   labels:
     app: dashy
 spec:
@@ -146,7 +142,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: dashy
-  namespace: {{ .Release.Namespace }}
   labels:
     app: dashy
 spec:
@@ -158,4 +153,3 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
-{{- end }}

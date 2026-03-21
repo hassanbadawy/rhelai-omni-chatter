@@ -1,0 +1,24 @@
+distribution: rh-dev
+replicas: 1
+port: 8321
+
+vllm:
+  url: "http://vllm-predictor.default.svc.cluster.local:8080/v1"
+  apiToken: "fake"
+  tlsVerify: "false"
+  maxTokens: "4096"
+
+configDir: /opt/app-root/src/.llama/distributions/rh
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "500Mi"
+  limits:
+    cpu: "4"
+    memory: "12Gi"
+
+embedding:
+  modelId: granite-embedding-125m
+  providerModelId: ibm-granite/granite-embedding-125m-english
+  dimension: 768

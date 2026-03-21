@@ -1,0 +1,13 @@
+image: docker.io/lissy93/dashy:latest
+replicas: 1
+theme: lissy
+
+clusterDomain: cluster-5t99k.5t99k.sandbox1248.opentlc.com
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi

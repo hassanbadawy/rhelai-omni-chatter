@@ -1,0 +1,15 @@
+apiVersion: v2
+name: qdrant
+description: Qdrant vector database for similarity search and AI applications on OpenShift
+type: application
+version: 0.1.0
+appVersion: "latest"
+icon: https://raw.githubusercontent.com/qdrant/qdrant/master/docs/logo.svg
+keywords:
+  - qdrant
+  - vector-database
+  - ai
+  - embeddings
+  - openshift
+maintainers:
+  - name: hasanbadawy

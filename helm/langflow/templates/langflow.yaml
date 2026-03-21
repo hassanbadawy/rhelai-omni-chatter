@@ -1,27 +1,24 @@
-{{- if .Values.langflow.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: langflow-data
-  namespace: {{ .Release.Namespace }}
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.langflow.storage }}
+      storage: {{ .Values.storage }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: langflow
-  namespace: {{ .Release.Namespace }}
   labels:
     app: langflow
-    {{- include "langflow-stack.labels" . | nindent 4 }}
+    app.kubernetes.io/part-of: langflow-stack
     app.openshift.io/runtime: python
 spec:
-  replicas: {{ .Values.langflow.replicas }}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: langflow
@@ -32,7 +29,7 @@ spec:
     spec:
       containers:
         - name: langflow
-          image: {{ .Values.langflow.image }}
+          image: {{ .Values.image }}
           ports:
             - containerPort: 7860
               name: http
@@ -50,9 +47,9 @@ spec:
             - name: LANGFLOW_ALEMBIC_LOG_FILE
               value: "/app/data/alembic.log"
             - name: LANGFLOW_AUTO_LOGIN
-              value: {{ .Values.langflow.env.autoLogin | quote }}
+              value: {{ .Values.autoLogin | quote }}
           resources:
-            {{- toYaml .Values.langflow.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /app/data
@@ -95,7 +92,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: langflow
-  namespace: {{ .Release.Namespace }}
   labels:
     app: langflow
 spec:
@@ -111,7 +107,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: langflow
-  namespace: {{ .Release.Namespace }}
   labels:
     app: langflow
 spec:
@@ -123,4 +118,3 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
-{{- end }}
