@@ -3,6 +3,27 @@ entries:
   anythingllm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-03-21T18:25:24.47569842Z"
+    description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user
+      support on OpenShift
+    digest: 36b6b3df7eae4684e260a159accb1939dea73db6543b5303a64afaa5e2e7e4b5
+    icon: https://avatars.githubusercontent.com/u/132292527
+    keywords:
+    - anythingllm
+    - ai
+    - rag
+    - agents
+    - llm
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: anythingllm
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/anythingllm-0.4.0/anythingllm-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-03-21T18:18:29.788591904Z"
     description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user
       support on OpenShift
@@ -409,4 +430,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/swagger-ui-0.1.0/swagger-ui-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-21T18:18:29.788624826Z"
+generated: "2026-03-21T18:25:24.475734237Z"
