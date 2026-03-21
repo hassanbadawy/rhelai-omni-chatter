@@ -33,6 +33,13 @@ spec:
         app: anythingllm
     spec:
       serviceAccountName: anythingllm-sa
+      initContainers:
+        - name: fix-permissions
+          image: busybox
+          command: ["sh", "-c", "chmod -R 777 /storage"]
+          volumeMounts:
+            - name: storage
+              mountPath: /storage
       containers:
         - name: anythingllm
           image: {{ .Values.image }}
