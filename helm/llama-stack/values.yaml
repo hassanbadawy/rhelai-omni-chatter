@@ -3,7 +3,7 @@ replicas: 1
 port: 8321
 
 vllm:
-  url: "http://vllm-predictor.default.svc.cluster.local:8080/v1"
+  url: "http://tinyllamatinyllama-11b-chat-v06-predictor.genai-demo.svc.cluster.local:8080/v1"
   apiToken: "fake"
   tlsVerify: "false"
   maxTokens: "4096"

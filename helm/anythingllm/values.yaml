@@ -1,0 +1,16 @@
+image: mintplexlabs/anythingllm:latest
+replicas: 1
+port: 3001
+
+storage: 2Gi
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+route:
+  enabled: true
