@@ -1,3 +1,4 @@
+{{- if .Values.pgadmin.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -9,10 +10,10 @@ metadata:
   name: pgadmin
   labels:
     app: pgadmin
-    app.kubernetes.io/part-of: langflow-stack
+    app.kubernetes.io/part-of: postgresql-stack
     app.openshift.io/runtime: postgresql
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: 1
   selector:
     matchLabels:
       app: pgadmin
@@ -24,22 +25,22 @@ spec:
       serviceAccountName: pgadmin-sa
       containers:
         - name: pgadmin
-          image: {{ .Values.image }}
+          image: {{ .Values.pgadmin.image }}
           ports:
-            - containerPort: {{ .Values.port }}
+            - containerPort: {{ .Values.pgadmin.port }}
               protocol: TCP
               name: http
           env:
             - name: PGADMIN_DEFAULT_EMAIL
-              value: {{ .Values.email | quote }}
+              value: {{ .Values.pgadmin.email | quote }}
             - name: PGADMIN_DEFAULT_PASSWORD
-              value: {{ .Values.password | quote }}
+              value: {{ .Values.pgadmin.password | quote }}
             - name: PGADMIN_LISTEN_PORT
-              value: {{ .Values.port | quote }}
+              value: {{ .Values.pgadmin.port | quote }}
             - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
               value: "False"
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.pgadmin.resources | nindent 12 }}
           volumeMounts:
             - name: pgadmin-data
               mountPath: /var/lib/pgadmin
@@ -57,11 +58,11 @@ spec:
   selector:
     app: pgadmin
   ports:
-    - port: {{ .Values.port }}
-      targetPort: {{ .Values.port }}
+    - port: {{ .Values.pgadmin.port }}
+      targetPort: {{ .Values.pgadmin.port }}
       protocol: TCP
       name: http
-{{- if .Values.route.enabled }}
+{{- if .Values.pgadmin.route.enabled }}
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -87,4 +88,5 @@ spec:
         - name: Content-Security-Policy
           action:
             type: Delete
+{{- end }}
 {{- end }}

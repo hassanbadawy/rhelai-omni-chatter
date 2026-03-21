@@ -30,7 +30,7 @@ curl -s -X 'POST' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-      "model": "vllm/tinyllama",
+      "model": "vllm/smollm2-135m-instruct",
       "messages": [
         {"role": "user", "content": "Say hello in one word."}
       ],

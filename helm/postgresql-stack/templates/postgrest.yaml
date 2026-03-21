@@ -1,0 +1,55 @@
+{{- if .Values.postgrest.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgrest
+  labels:
+    app: postgrest
+    app.kubernetes.io/part-of: postgresql-stack
+    app.openshift.io/runtime: golang
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgrest
+  template:
+    metadata:
+      labels:
+        app: postgrest
+    spec:
+      containers:
+        - name: postgrest
+          image: {{ .Values.postgrest.image }}
+          ports:
+            - containerPort: {{ .Values.postgrest.port }}
+              protocol: TCP
+              name: http
+          env:
+            - name: PGRST_DB_URI
+              value: "postgres://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@postgresql.{{ .Release.Namespace }}.svc:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}"
+            - name: PGRST_DB_ANON_ROLE
+              value: {{ .Values.postgresql.user | quote }}
+            - name: PGRST_DB_SCHEMAS
+              value: "public"
+            - name: PGRST_SERVER_PORT
+              value: {{ .Values.postgrest.port | quote }}
+            - name: PGRST_OPENAPI_MODE
+              value: "follow-privileges"
+          resources:
+            {{- toYaml .Values.postgrest.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgrest
+  labels:
+    app: postgrest
+spec:
+  selector:
+    app: postgrest
+  ports:
+    - port: {{ .Values.postgrest.port }}
+      targetPort: {{ .Values.postgrest.port }}
+      protocol: TCP
+      name: http
+{{- end }}
