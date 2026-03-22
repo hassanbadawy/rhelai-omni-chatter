@@ -67,6 +67,25 @@ entries:
   dashy:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-03-22T22:31:32.013948824Z"
+    description: Dashy dashboard with workspace view for managing AI platform services
+      on OpenShift
+    digest: 0f0106e42577ea570189ae686ca901e746cbc4dc7006f91bb81e1207b455ac0a
+    icon: https://raw.githubusercontent.com/Lissy93/dashy/master/public/web-icons/dashy-logo.png
+    keywords:
+    - dashy
+    - dashboard
+    - ui
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: dashy
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/dashy-0.4.0/dashy-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-03-22T22:19:00.839929404Z"
     description: Dashy dashboard with workspace view for managing AI platform services
       on OpenShift
@@ -400,4 +419,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-22T22:19:00.839960542Z"
+generated: "2026-03-22T22:31:32.01399015Z"
