@@ -110,6 +110,15 @@ spec:
         app: dashy
     spec:
       serviceAccountName: dashy-sa
+      initContainers:
+        - name: copy-config
+          image: busybox
+          command: ["sh", "-c", "cp /config-ro/conf.yml /config-rw/conf.yml"]
+          volumeMounts:
+            - name: config-ro
+              mountPath: /config-ro
+            - name: config-rw
+              mountPath: /config-rw
       containers:
         - name: dashy
           image: {{ .Values.image }}
@@ -120,13 +129,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - name: config
-              mountPath: /app/user-data/conf.yml
-              subPath: conf.yml
+            - name: config-rw
+              mountPath: /app/user-data
       volumes:
-        - name: config
+        - name: config-ro
           configMap:
             name: dashy-config
+        - name: config-rw
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
