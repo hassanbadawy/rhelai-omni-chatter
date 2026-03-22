@@ -187,6 +187,26 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-0.1.0/llama-stack-0.1.0.tgz
     version: 0.1.0
+  minio:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-03-22T01:33:58.588227488Z"
+    description: MinIO S3-compatible object storage for AI model weights and data
+      on OpenShift
+    digest: 18feba75f89b296366116cb7aeb8f85d32a8f424354894a2ce83f304b21445bb
+    icon: https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg
+    keywords:
+    - minio
+    - s3
+    - object-storage
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: minio
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/minio-0.1.0/minio-0.1.0.tgz
+    version: 0.1.0
   n8n:
   - apiVersion: v2
     appVersion: latest
@@ -314,4 +334,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-22T01:23:55.577959446Z"
+generated: "2026-03-22T01:33:58.58826071Z"
