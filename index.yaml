@@ -187,6 +187,31 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-0.1.0/llama-stack-0.1.0.tgz
     version: 0.1.0
+  milvus:
+  - apiVersion: v2
+    appVersion: "2.4"
+    created: "2026-03-22T01:37:40.528667146Z"
+    dependencies:
+    - name: milvus
+      repository: https://zilliztech.github.io/milvus-helm/
+      version: 4.2.52
+    description: Milvus vector database (standalone mode with Attu UI) for AI similarity
+      search on OpenShift
+    digest: 5e6a2efd22d70600c3d25fcedda214ac67548e2de00d586a1bdb9fc403a5ad13
+    icon: https://raw.githubusercontent.com/milvus-io/milvus-docs/master/assets/milvus-logo.png
+    keywords:
+    - milvus
+    - vector-database
+    - ai
+    - embeddings
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: milvus
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/milvus-1.0.0/milvus-1.0.0.tgz
+    version: 1.0.0
   minio:
   - apiVersion: v2
     appVersion: latest
@@ -334,4 +359,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-22T01:33:58.58826071Z"
+generated: "2026-03-22T01:37:40.528692844Z"
