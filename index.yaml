@@ -231,6 +231,28 @@ entries:
   postgresql-stack:
   - apiVersion: v2
     appVersion: "16"
+    created: "2026-03-22T01:23:55.577933498Z"
+    description: PostgreSQL database stack with pgAdmin, PostgREST API, and Swagger
+      UI for OpenShift
+    digest: 7c866b3cb4eb654338b6a3be9e7f98640eebcb94cd0a6922cead8542ba636a7b
+    icon: https://wiki.postgresql.org/images/a/a4/PostgreSQL_logo.3colors.svg
+    keywords:
+    - postgresql
+    - pgadmin
+    - postgrest
+    - swagger
+    - database
+    - api
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: postgresql-stack
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/postgresql-stack-0.2.0/postgresql-stack-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: "16"
     created: "2026-03-21T23:26:48.808321746Z"
     description: PostgreSQL database stack with pgAdmin, PostgREST API, and Swagger
       UI for OpenShift
@@ -292,4 +314,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-21T23:26:48.808340135Z"
+generated: "2026-03-22T01:23:55.577959446Z"
