@@ -1,0 +1,22 @@
+image: quay.io/minio/minio:latest
+storage: 20Gi
+
+rootUser: minio
+rootPassword: minio123
+
+apiPort: 9000
+consolePort: 9090
+
+route:
+  api:
+    enabled: true
+  console:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 100Mi
+  limits:
+    cpu: 250m
+    memory: 1Gi
