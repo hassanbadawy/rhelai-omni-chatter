@@ -1,0 +1,19 @@
+apiVersion: v2
+name: milvus
+description: Milvus vector database (standalone mode with Attu UI) for AI similarity search on OpenShift
+type: application
+version: 1.0.0
+appVersion: "2.4"
+icon: https://raw.githubusercontent.com/milvus-io/milvus-docs/master/assets/milvus-logo.png
+keywords:
+  - milvus
+  - vector-database
+  - ai
+  - embeddings
+  - openshift
+maintainers:
+  - name: hasanbadawy
+dependencies:
+  - name: milvus
+    repository: https://zilliztech.github.io/milvus-helm/
+    version: 4.2.52
