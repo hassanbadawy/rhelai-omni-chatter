@@ -25,3 +25,12 @@ embedding:
   modelId: granite-embedding-125m
   providerModelId: ibm-granite/granite-embedding-125m-english
   dimension: 768
+
+# -- Milvus vector database
+# mode: "inline" (embedded, no external service needed)
+#       "remote" (connect to a standalone Milvus instance)
+milvus:
+  mode: "inline"
+  # Remote Milvus settings (only used when mode is "remote")
+  endpoint: "http://milvus.genai-demo.svc:19530"
+  token: ""

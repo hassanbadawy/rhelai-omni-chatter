@@ -35,7 +35,14 @@ data:
       - provider_id: milvus
         provider_type: inline::milvus
         config:
+          {{- if eq .Values.milvus.mode "remote" }}
+          uri: {{ .Values.milvus.endpoint }}
+          {{- if .Values.milvus.token }}
+          token: {{ .Values.milvus.token }}
+          {{- end }}
+          {{- else }}
           db_path: {{ .Values.configDir }}/milvus.db
+          {{- end }}
           kvstore:
             backend: default
             namespace: "milvus"
