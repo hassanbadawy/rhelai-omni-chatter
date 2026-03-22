@@ -1,3 +1,5 @@
+clusterDomain: cluster-5t99k.5t99k.sandbox1248.opentlc.com
+
 # -- PostgreSQL
 postgresql:
   image: registry.redhat.io/rhel9/postgresql-16:latest

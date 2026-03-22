@@ -2,7 +2,7 @@ apiVersion: v2
 name: postgresql-stack
 description: PostgreSQL database stack with pgAdmin, PostgREST API, and Swagger UI for OpenShift
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "16"
 icon: https://wiki.postgresql.org/images/a/a4/PostgreSQL_logo.3colors.svg
 keywords:

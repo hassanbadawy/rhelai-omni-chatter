@@ -1,157 +1,146 @@
-# Langflow Stack on OpenShift
+# RHELAI Omni Chatter
 
-A multi-service AI platform deployed on Red Hat OpenShift. Includes Langflow, Llama Stack, Qdrant, n8n, PostgreSQL, PostgREST, and Swagger UI.
+AI platform stack for Red Hat OpenShift — Helm charts and deployment scripts for Langflow, Llama Stack, AnythingLLM, and supporting services.
+
+## Helm Chart Repository
+
+Add to OpenShift web console:
+
+```bash
+oc apply -f - <<'EOF'
+apiVersion: helm.openshift.io/v1beta1
+kind: HelmChartRepository
+metadata:
+  name: rhelai-omni-chatter
+spec:
+  connectionConfig:
+    url: https://hassanbadawy.github.io/rhelai-omni-chatter/
+  name: RHELAI Omni Chatter
+EOF
+```
+
+Or add via Helm CLI:
+
+```bash
+helm repo add rhelai https://hassanbadawy.github.io/rhelai-omni-chatter/
+helm repo update
+helm search repo rhelai
+```
+
+## Available Charts
+
+| Chart | Description | Port |
+|-------|-------------|------|
+| **langflow** | Visual LLM flow builder | 7860 |
+| **llama-stack** | Llama Stack via RHOAI operator (rh-dev + SQLite) | 8321 |
+| **anythingllm** | All-in-one AI app with RAG, agents, multi-user | 3001 |
+| **qdrant** | Vector database for similarity search | 6333/6334 |
+| **n8n** | Workflow automation platform | 5678 |
+| **dashy** | Dashboard with workspace view | 8080 |
+| **postgresql-stack** | PostgreSQL + pgAdmin + PostgREST + Swagger UI | 5432/5050/3000/8080 |
+
+## Quick Start
+
+Install individual charts from the OpenShift web console (**Developer > +Add > Helm Chart**) or via CLI:
+
+```bash
+# Example: install langflow
+helm install langflow rhelai/langflow -n my-namespace
+
+# Example: install the full PostgreSQL stack
+helm install db rhelai/postgresql-stack -n my-namespace
+```
+
+## vLLM CPU Model Deployment
+
+A generic ServingRuntime for running any HuggingFace model on CPU without GPU:
+
+```bash
+oc apply -f k8s/vllm-cpu-servingruntime.yaml -n <namespace>
+```
+
+Then deploy models from the RHOAI dashboard using **"vLLM CPU Generic Runtime"**.
+
+### CPU-Compatible Models (no GPU required)
+
+| Model | HuggingFace ID | Size | Chat Support |
+|-------|---------------|------|-------------|
+| SmolLM2-135M-Instruct | `hf://HuggingFaceTB/SmolLM2-135M-Instruct` | 135M | Yes |
+| TinyLlama-1.1B-Chat | `hf://TinyLlama/TinyLlama-1.1B-Chat-v1.0` | 1.1B | Yes |
+| Qwen2.5-0.5B | `hf://Qwen/Qwen2.5-0.5B` | 0.5B | Basic |
+| SmolLM2-360M-Instruct | `hf://HuggingFaceTB/SmolLM2-360M-Instruct` | 360M | Yes |
+
+> **Note**: Quantized models (GPTQ, AWQ, W4A16) require GPU. Use non-quantized models for CPU.
+
+> **Tip**: Set env var `VLLM_CPU_KVCACHE_SPACE=1` to limit KV cache memory (allows running in 4Gi).
 
 ## Architecture
 
 ```
-                    ┌──────────────┐
-                    │   Langflow   │ :7860 - Visual LLM flow builder
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              │            │            │
-              v            v            v
-     ┌────────────┐ ┌────────────┐ ┌────────┐
-     │ Llama Stack│ │   vLLM     │ │ Qdrant │ :6333 - Vector DB
-     │   :8321    │ │ (external) │ └────────┘
-     └─────┬──────┘ └────────────┘
-           │
-           v
-     ┌────────────┐
-     │   vLLM     │ - Model serving (KServe)
-     └────────────┘
-
-     ┌────────┐  ┌───────────┐  ┌────────────┐  ┌────────────┐
-     │  n8n   │  │ PostgreSQL│  │  PostgREST  │  │ Swagger UI │
-     │ :5678  │  │   :5432   │  │    :3000    │  │   :8080    │
-     └────────┘  └───────────┘  └─────────────┘  └────────────┘
+                    +-----------+
+                    |   Dashy   |  (Dashboard)
+                    +-----+-----+
+                          |
+          +-------+-------+-------+--------+
+          |       |       |       |        |
+     +----+--+ +--+---+ +-+--+ +-+------+ +--+--------+
+     |Langflow| |Llama | | n8n| |Anything| |PostgreSQL |
+     |        | |Stack | |    | |  LLM   | |  Stack    |
+     +----+---+ +--+---+ +----+ +--------+ +--+--------+
+          |        |                           |
+          |   +----+----+              +-------+-------+
+          |   |  vLLM   |             |pgAdmin|PostgREST|
+          |   | (RHOAI) |             +-------+---+-----+
+          |   +---------+                         |
+          |                                 +-----+----+
+          +-------> Qdrant                  |Swagger UI|
+            (Vector DB)                     +----------+
 ```
 
-## Quick Start
+## Llama Stack Configuration
 
-```bash
-# Deploy to OpenShift
-./openshift-install.sh
+The llama-stack chart deploys via the RHOAI operator using `LlamaStackDistribution` CR with:
+- **Distribution**: `rh-dev` with ConfigMap override (SQLite storage, no PostgreSQL dependency)
+- **Vector DB**: Inline Milvus (default) — Qdrant is upstream-only, not supported by rh-dev
+- **Inference**: Remote vLLM provider
+- **Embedding**: Inline sentence-transformers
 
-# Verify deployment
-./openshift-test.sh
+Key values to configure:
 
-# Test Llama Stack API (health, models, chat, embeddings)
-./openshift-curl-test.sh
-
-# Find vLLM services on the cluster
-./openshift-lookfor-vllm.sh
-
-# Local dev with Podman (port 7860)
-./run.sh
+```yaml
+vllm:
+  url: "http://<vllm-predictor>.<namespace>.svc.cluster.local:8080/v1"
+  apiToken: "fake"
+  maxTokens: "4096"
 ```
 
-## Stack Components
-
-| Component | Port | Description |
-|-----------|------|-------------|
-| Langflow | 7860 | Visual LLM flow builder |
-| Llama Stack | 8321 | AI API layer (inference, RAG, agents, safety) |
-| Qdrant | 6333/6334 | Vector database |
-| n8n | 5678 | Workflow automation |
-| PostgreSQL | 5432 | Relational database |
-| PostgREST | 3000 | RESTful API for PostgreSQL |
-| Swagger UI | 8080 | API documentation |
-
-## Connecting Langflow to LLMs
-
-### Langflow -> vLLM (direct)
-
-Use the **vLLM** block in Langflow:
-
-| Setting | Value |
-|---------|-------|
-| Model Name | `llama32` |
-| vLLM API Base | `https://llama32-ai501.apps.ocp.8r4k4.sandbox235.opentlc.com/v1` |
-| API Key | `fake` (anything) |
-
-This connects Langflow directly to the vLLM model server for raw inference.
-
-### Langflow -> Llama Stack
-
-Use the **OpenAI-compatible** block in Langflow:
-
-| Setting | Value |
-|---------|-------|
-| API Base | `https://llama-stack-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/v1` |
-| Model Name | `vllm/llama32` |
-| API Key | `fake` (any non-empty string) |
-
-This routes through Llama Stack, which adds agents, RAG, safety, and tool support on top of vLLM.
-
-### Internal Service URLs (within the cluster)
-
-| Service | URL |
-|---------|-----|
-| Llama Stack | `http://llama-stack-service.langflow.svc:8321` |
-| Qdrant | `http://qdrant.langflow.svc:6333` |
-| PostgreSQL | `postgresql.langflow.svc:5432` |
-| PostgREST | `http://postgrest.langflow.svc:3000` |
-
-## Prerequisites
-
-- Red Hat OpenShift cluster with RHOAI (Red Hat OpenShift AI) installed
-- Llama Stack operator activated
-- vLLM model serving endpoint available (via KServe InferenceService)
-
-## Finding vLLM on a New Cluster
+## Test Scripts
 
 ```bash
-# Find InferenceServices (KServe/RHOAI-managed vLLM)
-oc get inferenceservice -A
+# Test Llama Stack endpoints (models, chat)
+bash test-llamastack.sh
 
-# Find related services and routes
-oc get svc -A | grep -i -E "vllm|llama|predictor"
-oc get route -A | grep -i -E "vllm|llama"
+# Test vLLM directly (port-forward + curl)
+bash test-vllm.sh
 ```
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `langflow-openshift.yaml` | Main manifest (Namespace, Deployments, Services, Routes, NetworkPolicy, CR) |
+| `helm/` | Helm charts for all services |
+| `k8s/vllm-cpu-servingruntime.yaml` | Generic vLLM CPU ServingRuntime |
+| `langflow-openshift.yaml` | Monolith manifest (all services) |
 | `openshift-install.sh` | Installation script |
-| `openshift-test.sh` | Deployment verification script |
-| `openshift-curl-test.sh` | API test script (health, models, chat, embeddings) |
-| `openshift-lookfor-vllm.sh` | Discovers vLLM services across the cluster |
-| `run.sh` | Local Podman-based Langflow |
+| `openshift-test.sh` | Deployment verification |
+| `test-llamastack.sh` | Llama Stack API test |
+| `test-vllm.sh` | vLLM endpoint test |
+| `langflow-vllm-component.py` | Custom Langflow vLLM component (fixes empty kwarg issues) |
 
-## Key Notes
+## OpenShift Tips
 
-- Llama Stack uses the `rh-dev` distribution with a ConfigMap override for SQLite storage (avoids PostgreSQL dependency)
-- The Llama Stack operator creates a NetworkPolicy that blocks external access by default — the manifest includes an additional NetworkPolicy to allow the OpenShift router and same-namespace pods
-- vLLM InferenceServices use headless services — use external routes for cross-namespace access from Langflow
-- vLLM being down does not prevent the stack from starting — Llama Stack only validates that the URL is configured, not that it's reachable
-
-# access routes
-
-  - Langflow — https://langflow-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                         
-  - Llama Stack — https://llama-stack-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/docs                                                              
-  - Qdrant — https://qdrant-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com/dashboard                                                                   
-  - n8n — https://n8n-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                                   
-  - PostgREST — https://postgrest-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                       
-  - Swagger UI — https://swagger-ui-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com     
-
-   pgAdmin is Running (1/1). Access it at:                                                                                                              
-                                                                                                                                                       
-  https://pgadmin-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com                                                                                                                
-  Login credentials:                                          
-  -Email:admin@examplecom  
-  -Password:admin                                            
-
-  To connect to PostgreSQL, add a server with:                                                                                                         
-  - Host: postgresql.langflow.svc
-  - Port: 5432
-  - User: app_user
-  - Password: password
-  - Database: appdb
-
- Glance is running. Access your dashboard at:                                                                                                         
-# Dashy
- https://dashy-langflow.apps.ocp.8r4k4.sandbox235.opentlc.com  
+- All routes use TLS edge termination with `insecureEdgeTerminationPolicy: Redirect`
+- pgAdmin and AnythingLLM require `anyuid` SCC (they run as root)
+- Use internal service URLs between pods: `http://<svc>.<namespace>.svc.cluster.local:<port>`
+- KServe predictor services are headless — use external routes for cross-namespace access
+- Set `haproxy.router.openshift.io/timeout=120s` on routes for slow model responses

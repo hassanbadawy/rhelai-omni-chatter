@@ -52,4 +52,20 @@ spec:
       targetPort: {{ .Values.postgrest.port }}
       protocol: TCP
       name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: postgrest
+  labels:
+    app: postgrest
+spec:
+  to:
+    kind: Service
+    name: postgrest
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
 {{- end }}
