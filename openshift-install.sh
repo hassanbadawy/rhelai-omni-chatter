@@ -1,6 +1,11 @@
-# oc login
-export CLUSTER_DOMAIN=cluster-5t99k.5t99k.sandbox1248.opentlc.com
-oc login -u kubeadmin -p ${OC_PASSWORD} https://api.${CLUSTER_DOMAIN}:6443
+# Load credentials from .env
+if [ -f .env ]; then
+  source .env
+fi
+: "${CLUSTER_DOMAIN:?Set CLUSTER_DOMAIN in .env}"
+: "${OC_USER:?Set OC_USER in .env}"
+: "${OC_PASSWORD:?Set OC_PASSWORD in .env}"
+oc login -u "$OC_USER" -p "$OC_PASSWORD" https://api.${CLUSTER_DOMAIN}:6443
 
 # delete previous deployments if exists
 oc delete deployment pocketbase -n langflow --ignore-not-found

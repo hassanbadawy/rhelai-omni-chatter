@@ -1,7 +1,11 @@
 #!/bin/bash
 # openshift-test.sh - Verify langflow-stack deployment on OpenShift
 set -euo pipefail
-oc login -u admin -p ${OC_PASSWORD} https://api.ocp.8r4k4.sandbox235.opentlc.com:6443
+if [ -f .env ]; then source .env; fi
+: "${CLUSTER_DOMAIN:?Set CLUSTER_DOMAIN in .env}"
+: "${OC_USER:?Set OC_USER in .env}"
+: "${OC_PASSWORD:?Set OC_PASSWORD in .env}"
+oc login -u "$OC_USER" -p "$OC_PASSWORD" https://api.${CLUSTER_DOMAIN}:6443
 NAMESPACE="langflow"
 RHOAI_NS="redhat-ods-applications"
 

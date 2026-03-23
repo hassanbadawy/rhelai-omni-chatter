@@ -1,0 +1,39 @@
+# =============================================================================
+# GPU Hardware Profile for OpenShift AI (RHOAI)
+# =============================================================================
+# Creates a hardware profile with 1 NVIDIA GPU visible in the RHOAI dashboard.
+# Apply once per cluster:
+#   oc apply -f gpu-hardware-profile.yaml
+# =============================================================================
+apiVersion: infrastructure.opendatahub.io/v1
+kind: HardwareProfile
+metadata:
+  name: gpu-nvidia
+  namespace: redhat-ods-applications
+  labels:
+    app.kubernetes.io/part-of: hardwareprofile
+    app.opendatahub.io/hardwareprofile: "true"
+  annotations:
+    opendatahub.io/display-name: "NVIDIA GPU (1 GPU, 4 CPU, 20Gi)"
+    opendatahub.io/description: "GPU profile for LLM inference and embedding models on NVIDIA GPUs"
+    opendatahub.io/disabled: "false"
+spec:
+  identifiers:
+    - identifier: cpu
+      displayName: CPU
+      resourceType: CPU
+      defaultCount: 2
+      minCount: 1
+      maxCount: 8
+    - identifier: memory
+      displayName: Memory
+      resourceType: Memory
+      defaultCount: 8Gi
+      minCount: 4Gi
+      maxCount: 24Gi
+    - identifier: nvidia.com/gpu
+      displayName: NVIDIA GPU
+      resourceType: GPU
+      defaultCount: 1
+      minCount: 1
+      maxCount: 1
