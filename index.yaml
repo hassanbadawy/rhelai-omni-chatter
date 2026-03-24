@@ -144,10 +144,10 @@ entries:
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-24T22:15:06.487344+03:00"
+    created: "2026-03-24T22:47:57.362486+03:00"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
-    digest: e9a431043b9ab45dde97c7f0db6550e072d85dd62afa97ba8e94ed0314ab8f5e
+    digest: c03a965ec15276faf8033ed87e59891b752641f0af232c868f21d4716fb153b4
     icon: https://avatars.githubusercontent.com/u/151674099
     keywords:
     - guardrails
@@ -161,7 +161,7 @@ entries:
     name: guardrails-orchestrator
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/litemaas-0.1.0/guardrails-orchestrator-0.1.0.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/guardrails-orchestrator-0.1.0/guardrails-orchestrator-0.1.0.tgz
     version: 0.1.0
   langflow:
   - apiVersion: v2
@@ -205,7 +205,7 @@ entries:
   litemaas:
   - apiVersion: v2
     appVersion: 0.4.0
-    created: "2026-03-24T22:40:01.362635+03:00"
+    created: "2026-03-24T22:47:57.363249+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
     digest: e8cd66e6418b1b39e0dbf2c057c7fb0b4d0b1860da1a47efbec75a2e8536919a
@@ -220,7 +220,7 @@ entries:
     name: litemaas
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/litemaas-0.1.0/litemaas-0.1.0.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/guardrails-orchestrator-0.1.0/litemaas-0.1.0.tgz
     version: 0.1.0
   llama-stack:
   - apiVersion: v2
@@ -483,4 +483,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-24T22:40:01.361649+03:00"
+generated: "2026-03-24T22:47:57.360075+03:00"
