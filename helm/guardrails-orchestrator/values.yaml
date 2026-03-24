@@ -31,9 +31,10 @@ tls:
   # -- Auto-generate self-signed cert via OpenShift service serving certs
   autoGenerate: true
 
-# -- OpenShift route
+# -- OpenShift route (disabled by default — orchestrator is internal only,
+# accessed by Llama Stack via https://guardrails-orchestrator:8080)
 route:
-  enabled: true
+  enabled: false
 
 # -- Chunker service (for text chunking before detection)
 chunker:
