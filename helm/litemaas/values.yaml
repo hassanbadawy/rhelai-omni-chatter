@@ -9,9 +9,8 @@ global:
   # -- Enable cluster-scoped API lookups for auto-detection of clusterDomain
   # at template-rendering time (before resources are created).
   # Requires read access to config.openshift.io/v1 Ingress (typically cluster-admin).
-  # Default false: the post-install hook handles auto-detection instead.
-  # Set to true only if you have cluster-admin and want values resolved at template time.
-  clusterScopedLookups: false
+  # Set to false only if you do NOT have cluster-admin access.
+  clusterScopedLookups: true
   # -- Global image pull secrets
   imagePullSecrets: []
   # -- Global image pull policy
@@ -77,8 +76,8 @@ postgresql:
   auth:
     # -- PostgreSQL admin username
     username: litemaas_admin
-    # -- PostgreSQL admin password (CHANGE THIS)
-    password: changeme
+    # -- PostgreSQL admin password
+    password: litemaas-db-2026
     # -- Use an existing Secret instead of creating one.
     # Must contain keys: username, password
     existingSecret: ""
@@ -145,11 +144,11 @@ litellm:
 
   auth:
     # -- LiteLLM master/API key
-    masterKey: changeme
+    masterKey: litemaas-llm-key-2026
     # -- LiteLLM admin UI username
     uiUsername: admin
     # -- LiteLLM admin UI password
-    uiPassword: changeme
+    uiPassword: litemaas-ui-2026
     # -- Use an existing Secret instead of creating one.
     # Must contain keys: database-url, master-key, ui-username, ui-password
     existingSecret: ""
@@ -191,8 +190,8 @@ backend:
   corsOrigin: ""
 
   auth:
-    # -- JWT signing secret (CHANGE THIS)
-    jwtSecret: changeme
+    # -- JWT signing secret
+    jwtSecret: litemaas-jwt-secret-2026
     # -- JWT token expiration
     jwtExpiresIn: "24h"
     # -- OAuth client ID (only used when oauth.mode is "external")
@@ -205,12 +204,12 @@ backend:
     # Used in both "serviceaccount" and "external" modes.
     oauthCallbackUrl: ""
     # -- Admin API keys (comma-separated)
-    adminApiKeys: changeme
+    adminApiKeys: litemaas-admin-key-2026
     # -- Initial admin users (comma-separated usernames).
     # On OpenShift, auto-detected from the deploying user if empty.
     initialAdminUsers: ""
     # -- LiteLLM API key (must match litellm.auth.masterKey)
-    litellmApiKey: changeme
+    litellmApiKey: litemaas-llm-key-2026
     # -- Encryption key for stored model API keys (AES-256-GCM).
     # Falls back to litellmApiKey if empty. Recommended to set explicitly in production.
     litellmMasterKey: ""
@@ -256,8 +255,8 @@ backend:
       # -- StorageClass name (empty = cluster default)
       storageClass: ""
 
-  # -- Set to "0" to disable TLS verification (not recommended for production)
-  nodeTlsRejectUnauthorized: ""
+  # -- Set to "0" to disable TLS verification for self-signed certs (common on OpenShift)
+  nodeTlsRejectUnauthorized: "0"
 
   resources:
     requests:
@@ -347,7 +346,7 @@ ingress:
 # =============================================================================
 route:
   # -- Enable OpenShift Route resources (used when global.platform is "openshift")
-  enabled: false
+  enabled: true
   # -- Annotations for all Route resources
   annotations: {}
 

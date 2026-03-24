@@ -45,7 +45,7 @@ Component fullnames
 {{- end }}
 
 {{- define "litemaas.frontend.fullname" -}}
-{{- printf "%s" (include "litemaas.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-ui" (include "litemaas.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{- define "litemaas.redis.fullname" -}}
