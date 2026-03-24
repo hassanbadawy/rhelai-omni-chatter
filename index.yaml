@@ -183,6 +183,28 @@ entries:
   llama-stack:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-03-24T05:41:47.187549+03:00"
+    description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
+      with SQLite storage, vLLM inference)
+    digest: 04ebc8d04d267645ea5a594f4d77f085023967e44237973aa5b956066f8d01d4
+    icon: https://avatars.githubusercontent.com/u/151674099
+    keywords:
+    - llama-stack
+    - ai
+    - inference
+    - rag
+    - agents
+    - openshift
+    - rhoai
+    maintainers:
+    - name: hasanbadawy
+    name: llama-stack
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-0.4.0/llama-stack-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-03-22T17:40:14.948015583Z"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
@@ -419,4 +441,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-22T22:31:32.01399015Z"
+generated: "2026-03-24T05:41:47.187316+03:00"
