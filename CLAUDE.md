@@ -4,160 +4,301 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Langflow Stack — a multi-service AI platform deployed on Red Hat OpenShift. Includes Langflow, Llama Stack, Qdrant, n8n, PostgreSQL, PostgREST, and Swagger UI.
+**rhelai-omni-chatter** — a multi-service AI platform deployed on Red Hat OpenShift. The core components are:
 
-## Files
+1. **Llama Stack** — LLM inference server with RAG, safety shields, agents, and the Responses API
+2. **Llama Stack Playground** (`llama-stack-ui/`) — Streamlit UI for chat, documents/RAG, and settings
+3. **Guardrails Orchestrator** — Server-side content safety (HAP, prompt injection, language detection, regex)
+4. **Milvus** — Vector database for RAG (standalone or inline)
+5. **Helm Charts** (`helm/`) — Deployable charts for all components, published at `https://hassanbadawy.github.io/rhelai-omni-chatter/`
 
-- `langflow-openshift.yaml` — Main manifest with all Kubernetes resources (Namespace, Deployments, Services, Routes, NetworkPolicy, LlamaStackDistribution CR)
-- `openshift-install.sh` — Installation script (login, cleanup old resources, activate operator, apply manifest)
-- `openshift-test.sh` — Verification script (checks pods, services, routes, logs, health)
-- `openshift-curl-test.sh` — API test script (health, models, chat completion, embeddings via oc exec)
-- `openshift-lookfor-vllm.sh` — Discovers vLLM InferenceServices and related services across the cluster
-- `run.sh` — Local Podman-based Langflow for development
+Supporting services: Langflow, n8n, PostgreSQL, PostgREST, Swagger UI, Dashy, MinIO.
 
-## Deployment
+## Repository Structure
 
-```bash
-# OpenShift deployment
-./openshift-install.sh
-
-# Verify deployment
-./openshift-test.sh
-
-# Local dev (Podman, port 7860)
-./run.sh
+```
+├── helm/
+│   ├── llama-stack/          # Llama Stack chart (guardrails + milvus + RAG)
+│   ├── anythingllm/
+│   ├── dashy/
+│   ├── langflow/
+│   ├── milvus/
+│   ├── minio/
+│   ├── n8n/
+│   ├── postgresql-stack/
+│   └── qdrant/
+├── llama-stack-ui/           # Streamlit playground app
+│   ├── app.py                # Entry point
+│   ├── pages/
+│   │   ├── chat.py           # Chat with streaming, RAG, and safety shields
+│   │   ├── documents.py      # Vector store management, file upload
+│   │   └── settings.py       # Endpoint, model, shields, and sampling config
+│   ├── modules/
+│   │   ├── api.py            # LlamaStackClient — all REST API calls
+│   │   └── config.py         # YAML config loader/saver
+│   ├── tests/
+│   │   ├── test-env.sh       # Configurable endpoints for tests
+│   │   └── test-guardrails.sh # 18 e2e guardrails test scenarios
+│   ├── config.yaml           # Runtime config (endpoint, model, shields, etc.)
+│   └── docs/                 # API improvement docs
+├── .env                      # OpenShift cluster credentials (NEVER commit secrets)
+└── tests/
+    └── test-llamastack.sh    # Llama Stack API tests
 ```
 
-## OpenShift Stack Components
+## Helm Chart: llama-stack (`helm/llama-stack/`)
 
-| Component | Port | Image |
-|-----------|------|-------|
-| Langflow | 7860 | `langflowai/langflow:latest` |
-| Llama Stack | 8321 | Managed by LlamaStackDistribution CR (rh-dev distribution) |
-| Qdrant | 6333/6334 | `docker.io/qdrant/qdrant:latest` |
-| n8n | 5678 | `docker.io/n8nio/n8n:latest` |
-| PostgreSQL | 5432 | `registry.redhat.io/rhel9/postgresql-16:latest` |
-| PostgREST | 3000 | `docker.io/postgrest/postgrest:latest` |
-| Swagger UI | 8080 | `docker.io/swaggerapi/swagger-ui:latest` |
+### Two Modes
 
-## Llama Stack on OpenShift — Key Knowledge
+The chart operates in two modes controlled by `guardrails.enabled`:
 
-### Distribution Choices
+| | Default Mode | Guardrails Mode |
+|--|-------------|----------------|
+| Image | `rh-dev` (RHOAI operator default) | `quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3` |
+| Safety provider | `inline::llama-guard` | `remote::trusty_fms` → guardrails-orchestrator |
+| Config format | `backend`/`namespace` style kvstores | `type: sqlite` with `db_path` |
+| Shields | Empty | hap, prompt_injection, language_detection, regex |
+| Extra fields | `metadata_store`, `storage` blocks | `external_providers_dir` |
 
-- **`starter`**: Upstream community distribution. **NOT supported by RHOAI operator** — will fail with "Distribution name not supported".
-- **`rh-dev`** (currently used): The ONLY distribution supported by the RHOAI operator. Defaults to PostgreSQL for metadata storage — will crash without it. **Must** use a ConfigMap with custom `run.yaml` (SQLite storage) to avoid PostgreSQL dependency. This is the documented Red Hat lab pattern.
-- Never use `rh-dev` without a ConfigMap override or providing PostgreSQL connection.
+### Deploy with Guardrails
 
-### LlamaStackDistribution CR (Operator-managed)
-
-The Llama Stack Operator is part of Red Hat OpenShift AI (RHOAI). Activate it via:
 ```bash
-oc patch datasciencecluster default-dsc --type=merge \
-  -p '{"spec":{"components":{"llamastackoperator":{"managementState":"Managed"}}}}'
+helm upgrade llama-stack helm/llama-stack/ -n <namespace> \
+  --set guardrails.enabled=true \
+  --set guardrails.hap.enabled=true \
+  --set guardrails.prompt_injection.enabled=true \
+  --set guardrails.language_detection.enabled=true \
+  --set guardrails.regex.enabled=true \
+  --set milvus.mode=remote \
+  --set milvus.endpoint="http://milvus.<namespace>.svc:19530" \
+  --set vllm.url="http://<vllm-predictor>.<namespace>.svc:8080/v1"
 ```
 
-The operator creates Deployment, Service, PVC, and **NetworkPolicy** automatically from the CR. Do NOT create raw Deployments for llama-stack when using the operator.
+### Deploy without Guardrails
 
-### CR Structure (starter)
+```bash
+helm upgrade llama-stack helm/llama-stack/ -n <namespace> \
+  --set vllm.url="http://<vllm-predictor>.<namespace>.svc:8080/v1"
+```
 
+### Milvus Modes
+
+- `milvus.mode=inline` (default) — embedded Milvus with SQLite, no external service
+- `milvus.mode=remote` — connects to standalone Milvus service, default token `root:Milvus`
+
+### Helm Repo
+
+Published at `https://hassanbadawy.github.io/rhelai-omni-chatter/`. Chart packages are stored as GitHub Releases, `index.yaml` on `gh-pages` branch.
+
+```bash
+helm repo add hassanbadawy https://hassanbadawy.github.io/rhelai-omni-chatter/
+helm install llama-stack hassanbadawy/llama-stack
+```
+
+To publish a new version: bump `Chart.yaml` version, `helm package`, `gh release create`, update `gh-pages` index.yaml via `helm repo index --merge`.
+
+## Streamlit Playground (`llama-stack-ui/`)
+
+### Architecture
+
+- **`app.py`** — Entry point, Streamlit page navigation
+- **`pages/chat.py`** — Chat with streaming via Responses API (`/v1/responses`), optional RAG from vector stores, server-side safety shields via `/v1/safety/run-shield`
+- **`pages/documents.py`** — Vector store CRUD, file upload with chunking (512 tokens, 50 overlap), search
+- **`pages/settings.py`** — Endpoint, model selection (from `/v1/models`), embedding model, safety shields (multiselect from `/v1/shields`), sampling parameters, language, system prompt
+- **`modules/api.py`** — `LlamaStackClient` class wrapping all Llama Stack REST endpoints
+- **`modules/config.py`** — YAML config with defaults, persists to `config.yaml`
+
+### Data Flow
+
+```
+User input → [input shields check via /v1/safety/run-shield]
+           → [RAG: search vector store → prepend chunks to prompt]
+           → /v1/responses (streaming, with previous_response_id for history)
+           → [output shields check via /v1/safety/run-shield]
+           → Display response
+```
+
+### Safety Shields in the UI
+
+Shields are **fully server-side** — the UI calls Llama Stack's `/v1/safety/run-shield` which delegates to `remote::trusty_fms` → guardrails-orchestrator → detectors. No external guardrails endpoints are exposed to the UI.
+
+Settings page shows shields from `/v1/shields` as multiselect checkboxes for input and output. Config stores `input_shields` and `output_shields` as lists of shield IDs.
+
+### Running Locally
+
+```bash
+cd llama-stack-ui
+export LLAMA_STACK_API_ENDPOINT="https://llama-stack-<namespace>.apps.<cluster>"
+streamlit run app.py
+# or: ./run.sh
+```
+
+### Config Keys (`config.yaml`)
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `endpoint` | string | Llama Stack API URL |
+| `model` | string | LLM model ID (e.g. `vllm/llama32`) |
+| `embedding_model` | string | Embedding model ID (e.g. `granite-embedding-125m`) |
+| `embedding_dimension` | int | Embedding vector dimension (e.g. `768`) |
+| `vector_io_provider` | string | Vector store provider (e.g. `milvus`) |
+| `safety_enabled` | bool | Enable/disable shield checks |
+| `input_shields` | list | Shield IDs to run on user input |
+| `output_shields` | list | Shield IDs to run on LLM output |
+| `temperature` | float | Sampling temperature |
+| `top_p` | float | Top-p sampling |
+| `max_tokens` | int | Max output tokens |
+| `language` | string | UI language |
+| `system_prompt` | string | System prompt for chat |
+| `user_id` | string | User identifier for conversation history |
+
+## Guardrails Architecture
+
+### Flow (Server-Side)
+
+```
+Llama Stack (/v1/safety/run-shield)
+    → remote::trusty_fms provider
+        → guardrails-orchestrator (port 8080, internal)
+            → HAP detector (ai501 namespace, port 8000)
+            → prompt-injection detector (ai501 namespace, port 8000)
+            → language detector (ai501 namespace, port 8000)
+            → regex detector (built-in to orchestrator)
+```
+
+### Detector API Format (IBM/FMS guardrails)
+
+All detectors use the same API:
+```
+POST {url}/api/v1/text/contents
+{"contents": ["text"], "detector_params": {"threshold": 0.5}}
+
+Clean: [[]]
+Violation: [[{"text":"...","detection_type":"INJECTION","score":0.99,...}]]
+```
+
+### Available Shields
+
+| Shield ID | Detector | What It Catches |
+|-----------|----------|----------------|
+| `hap` | guardrails-detector-ibm-hap | Hate, abuse, profanity |
+| `prompt_injection` | prompt-injection-detector | Prompt injection attacks |
+| `language_detection` | language-detector | Non-English text |
+| `regex` | Built-in regex | Custom patterns (e.g. `(?i).*fight club.*`) |
+
+### Testing Guardrails
+
+```bash
+cd llama-stack-ui
+./tests/test-guardrails.sh    # 18 e2e tests
+```
+
+Edit `tests/test-env.sh` to point at different endpoints.
+
+## Critical Knowledge — Pitfalls to Avoid
+
+### Llama Stack Config Format (TWO DIFFERENT SCHEMAS)
+
+The `rh-dev` image and the custom `llama-stack-vllm-milvus-fms` image use **different config schemas**:
+
+| Field | rh-dev image | Custom (FMS) image |
+|-------|-------------|-------------------|
+| Storage | `metadata_store` + `storage.backends` + `storage.stores` | NOT supported — causes `ValidationError` |
+| Kvstore | `backend: default, namespace: "x"` | `type: sqlite, db_path: /path/store.db` |
+| Files metadata | `backend: sql, namespace: files` | `type: sqlite, db_path: /path/files.db` |
+| vLLM config key | `base_url` | `url` |
+
+**Never mix config formats between images.** The helm chart handles this with the `guardrails.enabled` conditional — two completely separate config blocks.
+
+### Remote Milvus Requires Token
+
+`remote::milvus` provider requires a `token` field or it fails with `Field required`. Default is `root:Milvus`. Our chart sets this automatically. The genaiops chart also handles this.
+
+### Genaiops Chart Namespace Bug
+
+The `genaiops/llama-stack-operator-instance` chart conditionally includes `remote::milvus` only when the namespace contains "test" or "prod". Namespaces like `user1-canopy` get `inline::milvus` even with `rag.enabled=true`. **Our chart fixes this** by using `milvus.mode` (a simple value) instead of namespace-based conditionals.
+
+### Custom Image and the Operator
+
+The `LlamaStackDistribution` CR uses `distribution.image` (not `distribution.name`) to specify a custom image. If you set `distribution.name` AND a custom image, the operator ignores the image. Only one should be set:
 ```yaml
-apiVersion: llamastack.io/v1alpha1
-kind: LlamaStackDistribution
-metadata:
-  name: llama-stack
-spec:
-  replicas: 1
-  server:
-    distribution:
-      name: starter
-    containerSpec:
-      port: 8321
-      env:
-        - name: VLLM_URL
-          value: "http://..."
-        - name: VLLM_MAX_TOKENS
-          value: "4096"
-        - name: VLLM_API_TOKEN
-          value: "fake"
-    storage:
-      size: "20Gi"
-      mountPath: "/home/lls/.lls"
+distribution:
+  image: "quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3"  # guardrails
+  # OR
+  name: rh-dev  # default, NOT both
 ```
 
-### CR Structure (rh-dev with ConfigMap override)
+### `remote::trusty_fms` Is NOT Upstream
 
-If using `rh-dev`, you MUST provide a ConfigMap with a custom `run.yaml`:
-```yaml
-spec:
-  server:
-    distribution:
-      name: rh-dev
-    containerSpec:
-      command:
-        - /bin/sh
-        - "-c"
-        - llama stack run /etc/llama-stack/run.yaml
-    userConfig:
-      configMapName: llama-stack-config
+The `trusty_fms` safety provider only exists in the custom FMS image (`quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms`). It is NOT available in the standard `rh-dev` image. Deploying with `guardrails.enabled=true` on the standard image causes: `ValueError: Provider 'remote::trusty_fms' is not available for API 'Api.safety'`.
+
+### `remote::passthrough` Does NOT Work with IBM Detectors
+
+The upstream Llama Stack `remote::passthrough` safety provider calls `/moderations` (OpenAI format). IBM guardrails detectors use `/api/v1/text/contents` (different API). They are incompatible. Use `remote::trusty_fms` instead.
+
+### Route Timeouts for File Uploads
+
+OpenShift routes default to 30-second timeout. File uploads with embedding can exceed this for large files. Always annotate the route:
+```bash
+oc annotate route llama-stack haproxy.router.openshift.io/timeout=300s
 ```
 
-The ConfigMap must contain a `config.yaml` key (not `run.yaml`) defining all providers and storage backends. See the Red Hat lab example at `https://github.com/burrsutter/fantaco-redhat-one-2026`.
+### Empty `embedding_dimension` Breaks Vector Store Creation
 
-### Vector Database Options (rh-dev only)
+The `/v1/vector_stores` API requires `embedding_dimension` as an integer. An empty string (`""`) causes `400 Bad Request`. The UI code handles this by omitting the field when empty.
 
-| Option | Env Vars Needed | External Infra |
-|--------|----------------|----------------|
-| Inline Milvus | None (default) | No |
-| Remote Milvus | `MILVUS_ENDPOINT`, `MILVUS_TOKEN`, `MILVUS_CONSISTENCY_LEVEL` | Yes (etcd + Milvus) |
-| Inline FAISS | None (RHOAI 3.0+) | No |
+### Model Names Change Between Charts
 
-Qdrant is NOT supported by the rh-dev distribution. It's an upstream-only provider.
+The genaiops chart names vLLM providers as `vllm-<model>` (e.g. `vllm-llama32/llama32`). Our chart uses `vllm` (e.g. `vllm/llama32`). After switching charts, users must re-select the model in Settings.
 
-### Env Var Names
+### Helm Release Conflicts with Manually Created Routes
 
-- vLLM: `VLLM_URL` (env var), `VLLM_API_TOKEN`, `VLLM_TLS_VERIFY`, `VLLM_MAX_TOKENS`
-- **In ConfigMap config.yaml, use `base_url` (not `url`)** for the vLLM endpoint. The Pydantic model (`VLLMInferenceAdapterConfig`) expects `base_url`; using `url` is silently ignored.
-- PostgreSQL (rh-dev default storage): `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- Note: `INFERENCE_MODEL` is used by rh-dev but NOT by starter
+If you manually `oc create route` for llama-stack, then `helm upgrade` will fail with "cannot import into current release". Delete the manual route before upgrading: `oc delete route llama-stack -n <namespace>`.
 
-### Common Pitfalls
+## OpenShift Environment
 
-1. **rh-dev crashes with "Could not connect to PostgreSQL"** — The rh-dev distribution defaults to PostgreSQL for kvstore. Either provide PostgreSQL env vars or use a ConfigMap with SQLite storage.
-2. **"Provider 'vllm-inference' not found"** — Happens with custom RHOAI images that have their own entrypoint generating a different run.yaml. Use the operator-managed approach instead.
-3. **Env vars ignored by rh-dev** — The rh-dev built-in run.yaml may not reference `${env.POSTGRES_HOST}` etc. The ConfigMap approach is the only reliable way to customize rh-dev.
-4. **Don't mix raw Deployments with the operator** — If using LlamaStackDistribution CR, the operator manages the Deployment/Service. Clean up any manually created llama-stack Deployment/Service/Route before applying the CR.
-5. **Operator NetworkPolicy blocks external access** — The operator creates a NetworkPolicy that only allows ingress from pods labeled `app.kubernetes.io/part-of: llama-stack` and the `redhat-ods-applications` namespace. To expose llama-stack via a Route or allow other pods (e.g., Langflow) to reach it, you must create an additional NetworkPolicy allowing ingress from the OpenShift router (`network.openshift.io/policy-group: ingress`) and same-namespace pods.
-6. **vLLM InferenceService uses headless services** — KServe predictor services have `clusterIP: None`, which can cause cross-namespace connectivity issues. Use the external route URL instead for Langflow vLLM blocks.
+### Cluster Access
 
-## OpenShift Tips
+Credentials in `.env`:
+```bash
+source .env
+oc login -u $OC_USER -p $OC_PASSWORD https://api.$CLUSTER_DOMAIN:6443 --insecure-skip-tls-verify
+```
 
-- All routes use TLS edge termination with `insecureEdgeTerminationPolicy: Redirect`
-- PostgreSQL route uses `tls.termination: passthrough` (not edge)
-- Non-root containers need `securityContext` with `runAsNonRoot: true`, `allowPrivilegeEscalation: false`, and drop ALL capabilities
-- Use `emptyDir: {}` volumes for temp/cache dirs that need write access
-- Langflow needs writable dirs at `/app/data`, `/tmp`, and `/.cache`
-- PostgreSQL on RHEL9 image uses env vars: `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD`, `POSTGRESQL_DATABASE`
-- PostgREST connects via: `PGRST_DB_URI=postgres://user:pass@postgresql.langflow.svc:5432/dbname`
-- Qdrant internal URL for Langflow flows: `http://qdrant.langflow.svc:6333` or `http://qdrant:6333`
+### Key Namespaces
 
-## Finding vLLM on a New Cluster
+- `user1-canopy` — Llama Stack, Milvus, Guardrails Orchestrator, Dashy
+- `ai501` — Shared services: vLLM models, guardrails detectors, embedding models, Docling
+
+### Finding Services on a New Cluster
 
 ```bash
-# Find InferenceServices (KServe/RHOAI-managed vLLM)
+# vLLM InferenceServices
 oc get inferenceservice -A
-# Find related services
-oc get svc -A | grep -i -E "vllm|llama|predictor"
-# Find external routes
-oc get route -A | grep -i -E "vllm|llama"
+
+# Guardrails detectors
+oc get inferenceservice -A | grep -iE "guard|hap|inject|language"
+
+# Services and routes
+oc get svc -A | grep -iE "vllm|llama|predictor|guard|milvus"
+oc get route -A | grep -iE "vllm|llama|guard"
 ```
 
-Internal URL pattern: `http://<service-name>.<namespace>.svc:port/v1`
-Note: KServe predictor services are headless — use external routes for cross-namespace access from Langflow.
+### Guardrails Detector Internal URLs
+
+| Detector | Internal URL |
+|----------|-------------|
+| HAP | `http://guardrails-detector-ibm-hap-predictor.ai501.svc:8000` |
+| Prompt Injection | `http://prompt-injection-detector-predictor.ai501.svc:8000` |
+| Language | `http://language-detector-predictor.ai501.svc:8000` |
+
+These are only accessible from inside the cluster. The guardrails orchestrator calls them internally.
 
 ## Reference Links
 
 - Red Hat Llama Stack docs: `https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.0/html-single/working_with_llama_stack/index`
 - OpenDataHub Llama Stack: `https://opendatahub.io/docs/working-with-llama-stack/`
-- Llama Stack demos: `https://github.com/opendatahub-io/llama-stack-demos/tree/main/deployment/kubernetes`
+- GenAIOps Helm Charts: `https://rhoai-genaiops.github.io/genaiops-helmcharts/`
 - Red Hat lab example: `https://github.com/burrsutter/fantaco-redhat-one-2026`
 - Llama Stack K8s Operator: `https://github.com/llamastack/llama-stack-k8s-operator`
+- Llama Stack Safety docs: `https://llamastack.github.io/docs/building_applications/safety`
