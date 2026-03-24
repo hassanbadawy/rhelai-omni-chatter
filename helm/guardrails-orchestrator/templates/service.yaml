@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardrails-orchestrator
+  labels:
+    app: guardrails-orchestrator
+    app.kubernetes.io/name: guardrails-orchestrator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    {{- if and .Values.tls.enabled .Values.tls.autoGenerate (not .Values.tls.existingSecret) }}
+    service.beta.openshift.io/serving-cert-secret-name: guardrails-orchestrator-tls
+    {{- end }}
+spec:
+  selector:
+    app: guardrails-orchestrator
+    component: guardrails-orchestrator
+  ports:
+    - name: http
+      port: 8080
+      targetPort: {{ .Values.server.port }}
+      protocol: TCP

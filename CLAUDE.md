@@ -188,6 +188,20 @@ The `genaiops/llama-stack-operator-instance` chart uses a **custom image** (`qua
 
 Our chart was updated to use this image and provider when `guardrails.enabled=true`. When disabled, it falls back to the standard `rh-dev` image with `inline::llama-guard`.
 
+### Two Separate Paths (Inference vs Safety)
+
+Llama Stack has **two completely independent paths** — the guardrails orchestrator does NOT connect to vLLM:
+
+```
+Path 1 — LLM Inference:
+  Client → Llama Stack → remote::vllm provider → vLLM server → LLM model
+
+Path 2 — Safety Checks:
+  Client → Llama Stack → remote::trusty_fms provider → guardrails-orchestrator → detectors
+```
+
+These paths never intersect. The orchestrator only routes text to lightweight classifier models (HAP, prompt injection, language detection) and regex — it has no knowledge of or connection to the vLLM inference server.
+
 ### Flow (Server-Side)
 
 ```

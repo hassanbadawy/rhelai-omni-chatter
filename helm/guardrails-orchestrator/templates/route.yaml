@@ -1,0 +1,20 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: guardrails-orchestrator
+  labels:
+    app: guardrails-orchestrator
+    app.kubernetes.io/name: guardrails-orchestrator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  to:
+    kind: Service
+    name: guardrails-orchestrator
+  port:
+    targetPort: http
+  {{- if .Values.tls.enabled }}
+  tls:
+    termination: passthrough
+  {{- end }}
+{{- end }}

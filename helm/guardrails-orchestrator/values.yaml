@@ -1,0 +1,107 @@
+# -- Guardrails Orchestrator Configuration
+# Single detectors map generates both orchestrator and gateway ConfigMaps automatically.
+
+replicas: 1
+
+# -- Orchestrator images
+images:
+  orchestrator: "registry.redhat.io/rhoai/odh-fms-guardrails-orchestrator-rhel9@sha256:c194fea3e7005f3aa8043efeb3a89d036cc46c923c50719b49a7a47d90b1140c"
+  gateway: "registry.redhat.io/rhoai/odh-trustyai-vllm-orchestrator-gateway-rhel9@sha256:581d8283d38fe902061d52391da182d74d45d41c543d7df130f1e0e76fa9fd06"
+  regexDetector: "registry.redhat.io/rhoai/odh-built-in-detector-rhel9@sha256:0e5c1491e1e31ac6cc993efe78e4a8afa9c2d86635b989eaf4508e18607cf2da"
+
+# -- Orchestrator server config
+server:
+  port: 8032
+  logLevel: info
+
+# -- Resource limits for orchestrator container
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+# -- TLS configuration
+tls:
+  enabled: true
+  # -- Use existing secret (must contain tls.crt and tls.key)
+  existingSecret: ""
+  # -- Auto-generate self-signed cert via OpenShift service serving certs
+  autoGenerate: true
+
+# -- OpenShift route
+route:
+  enabled: true
+
+# -- Chunker service (for text chunking before detection)
+chunker:
+  hostname: "chunker-service.ai501.svc.cluster.local"
+  port: 8085
+
+# -- OpenAI-compatible LLM endpoint (used by gateway for passthrough)
+openai:
+  hostname: ""
+  port: 8080
+
+# -- Detectors configuration
+# Each detector entry generates:
+#   1. An entry in the orchestrator ConfigMap (hostname, port, threshold)
+#   2. An entry in the gateway ConfigMap (input/output, params)
+#   3. Inclusion in the "all" route
+#
+# To add a new detector, just add a new entry here.
+# The detector must expose: POST /api/v1/text/contents
+#   Request:  {"contents": ["text"], "detector_params": {"threshold": 0.5}}
+#   Response: [[{"detection_type": "...", "score": 0.99, ...}]]
+#
+detectors:
+  regex_competitor:
+    enabled: true
+    # -- "builtin" means the regex sidecar container (127.0.0.1)
+    type: builtin
+    threshold: 0.5
+    input: true
+    output: true
+    params:
+      regex:
+        - '(?i).*fight club.*'
+
+  hap:
+    enabled: true
+    type: remote
+    hostname: "guardrails-detector-ibm-hap-predictor.ai501.svc.cluster.local"
+    port: 8000
+    threshold: 0.5
+    input: true
+    output: true
+    params: {}
+
+  prompt_injection:
+    enabled: true
+    type: remote
+    hostname: "prompt-injection-detector-predictor.ai501.svc.cluster.local"
+    port: 8000
+    threshold: 0.5
+    input: true
+    output: false
+    params: {}
+
+  language_detection:
+    enabled: true
+    type: remote
+    hostname: "language-detector-predictor.ai501.svc.cluster.local"
+    port: 8000
+    threshold: 0.5
+    input: true
+    output: true
+    params: {}
+
+# -- Custom routes (in addition to auto-generated "all" and "passthrough")
+# Each route maps a name to a list of detector names.
+customRoutes:
+  hap:
+    detectors:
+      - hap
+    fallback_message: "\U0001F482 You know I can't let you ask me that \U0001F482"

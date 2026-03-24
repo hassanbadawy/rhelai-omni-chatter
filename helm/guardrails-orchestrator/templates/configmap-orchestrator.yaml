@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fms-orchestr8-config-nlp
+  labels:
+    app: guardrails-orchestrator
+    app.kubernetes.io/name: guardrails-orchestrator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  config.yaml: |
+    chunkers:
+      sentence:
+        type: sentence
+        service:
+            hostname: {{ .Values.chunker.hostname }}
+            port: {{ .Values.chunker.port }}
+    {{- if .Values.openai.hostname }}
+    openai:
+        service:
+            hostname: {{ .Values.openai.hostname }}
+            port: {{ .Values.openai.port }}
+    {{- end }}
+    detectors:
+    {{- range $name, $detector := .Values.detectors }}
+    {{- if $detector.enabled }}
+      {{ $name }}:
+        type: text_contents
+        service:
+          {{- if eq $detector.type "builtin" }}
+          hostname: "127.0.0.1"
+          port: 8080
+          {{- else }}
+          hostname: {{ $detector.hostname }}
+          port: {{ $detector.port | default 8000 }}
+          {{- end }}
+        chunker_id: whole_doc_chunker
+        default_threshold: {{ $detector.threshold | default 0.5 }}
+    {{- end }}
+    {{- end }}

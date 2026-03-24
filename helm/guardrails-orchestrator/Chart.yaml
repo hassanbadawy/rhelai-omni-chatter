@@ -1,0 +1,16 @@
+apiVersion: v2
+name: guardrails-orchestrator
+description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP, prompt injection, language detection, regex, custom detectors)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+icon: https://avatars.githubusercontent.com/u/151674099
+keywords:
+  - guardrails
+  - safety
+  - content-moderation
+  - openshift
+  - rhoai
+  - trustyai
+maintainers:
+  - name: hasanbadawy

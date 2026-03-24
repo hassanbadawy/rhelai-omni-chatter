@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardrails-orchestrator-allow-ingress
+  labels:
+    app: guardrails-orchestrator
+    app.kubernetes.io/name: guardrails-orchestrator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  podSelector:
+    matchLabels:
+      app: guardrails-orchestrator
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+        - podSelector: {}
+      ports:
+        - port: {{ .Values.server.port }}
+          protocol: TCP
+  policyTypes:
+    - Ingress

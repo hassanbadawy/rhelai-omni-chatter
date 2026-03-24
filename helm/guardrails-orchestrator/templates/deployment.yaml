@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardrails-orchestrator
+  labels:
+    app: guardrails-orchestrator
+    app.kubernetes.io/name: guardrails-orchestrator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: trustyai
+    component: guardrails-orchestrator
+    deploy-name: guardrails-orchestrator
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: guardrails-orchestrator
+      component: guardrails-orchestrator
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: guardrails-orchestrator
+        app.kubernetes.io/name: guardrails-orchestrator
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: trustyai
+        component: guardrails-orchestrator
+        deploy-name: guardrails-orchestrator
+      annotations:
+        checksum/orchestrator-config: {{ include (print $.Template.BasePath "/configmap-orchestrator.yaml") . | sha256sum }}
+        checksum/gateway-config: {{ include (print $.Template.BasePath "/configmap-gateway.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: guardrails-orchestrator-sa
+      containers:
+        # -- Main orchestrator container
+        - name: guardrails-orchestrator
+          image: {{ .Values.images.orchestrator }}
+          imagePullPolicy: Always
+          env:
+            - name: ORCHESTRATOR_CONFIG
+              value: /config/config.yaml
+            - name: HTTP_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: RUST_BACKTRACE
+              value: full
+            - name: RUST_LOG
+              value: {{ .Values.server.logLevel }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            {{- if .Values.tls.enabled }}
+            - name: TLS_CERT_PATH
+              value: /etc/tls/private/tls.crt
+            - name: TLS_KEY_PATH
+              value: /etc/tls/private/tls.key
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.server.port }}
+              name: {{ if .Values.tls.enabled }}https{{ else }}http{{ end }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: orchestrator-config
+              mountPath: /config/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            {{- if .Values.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/tls/private
+              readOnly: true
+            - name: tls-ca-bundle
+              mountPath: /etc/tls/ca
+              readOnly: true
+            {{- end }}
+
+        # -- Gateway sidecar container
+        - name: guardrails-orchestrator-gateway
+          image: {{ .Values.images.gateway }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/bin/vllm-orchestrator-gateway
+          env:
+            - name: GATEWAY_CONFIG
+              value: /config/config.yaml
+            - name: RUST_LOG
+              value: {{ .Values.server.logLevel }}
+            - name: GATEWAY_USE_MTLS
+              value: "false"
+          volumeMounts:
+            - name: gateway-config
+              mountPath: /config/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            {{- if .Values.tls.enabled }}
+            - name: tls-certs
+              mountPath: /etc/tls/private
+              readOnly: true
+            - name: tls-ca-bundle
+              mountPath: /etc/tls/ca
+              readOnly: true
+            {{- end }}
+
+        {{- $hasBuiltin := false }}
+        {{- range $name, $detector := .Values.detectors }}
+        {{- if and $detector.enabled (eq $detector.type "builtin") }}
+        {{- $hasBuiltin = true }}
+        {{- end }}
+        {{- end }}
+        {{- if $hasBuiltin }}
+        # -- Built-in regex detector sidecar
+        - name: guardrails-orchestrator-detectors
+          image: {{ .Values.images.regexDetector }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/bin/regex-detector
+        {{- end }}
+
+      volumes:
+        - name: orchestrator-config
+          configMap:
+            name: fms-orchestr8-config-nlp
+        - name: gateway-config
+          configMap:
+            name: fms-orchestr8-config-gateway
+        {{- if .Values.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ if .Values.tls.existingSecret }}{{ .Values.tls.existingSecret }}{{ else }}guardrails-orchestrator-tls{{ end }}
+        - name: tls-ca-bundle
+          configMap:
+            name: guardrails-orchestrator-ca-bundle
+            optional: true
+        {{- end }}
