@@ -141,6 +141,28 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/dashy-0.1.0/dashy-0.1.0.tgz
     version: 0.1.0
+  docling-serve:
+  - apiVersion: v2
+    appVersion: 0.7.0
+    created: "2026-03-24T21:46:31.461727621Z"
+    description: Docling Serve — GPU-accelerated document conversion service (PDF,
+      DOCX, images to markdown/JSON) for RAG pipelines
+    digest: 0d63b111bbb87595237d9f587efc7e694140344e4ef0d75a0104ce288c70610c
+    icon: https://avatars.githubusercontent.com/u/151674099
+    keywords:
+    - docling
+    - document-conversion
+    - pdf
+    - rag
+    - openshift
+    - gpu
+    maintainers:
+    - name: hasanbadawy
+    name: docling-serve
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/docling-serve-0.1.0/docling-serve-0.1.0.tgz
+    version: 0.1.0
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -483,4 +505,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-24T22:47:57.360075+03:00"
+generated: "2026-03-24T21:46:31.789278659Z"
