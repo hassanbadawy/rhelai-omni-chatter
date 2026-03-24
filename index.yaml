@@ -144,7 +144,7 @@ entries:
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-03-24T21:37:41.610681+03:00"
+    created: "2026-03-24T22:15:06.487344+03:00"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
     digest: e9a431043b9ab45dde97c7f0db6550e072d85dd62afa97ba8e94ed0314ab8f5e
@@ -161,7 +161,7 @@ entries:
     name: guardrails-orchestrator
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/guardrails-orchestrator-0.1.0/guardrails-orchestrator-0.1.0.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/litemaas-0.1.0/guardrails-orchestrator-0.1.0.tgz
     version: 0.1.0
   langflow:
   - apiVersion: v2
@@ -205,10 +205,10 @@ entries:
   litemaas:
   - apiVersion: v2
     appVersion: 0.4.0
-    created: "2026-03-24T18:58:29.177192772Z"
+    created: "2026-03-24T22:15:06.488783+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
-    digest: a18acca19b2f6e0b967a6eb2b9e20a709c22b31729610122491686760ce00e8f
+    digest: f1aa51ab07b74cbe353a883f72f215c6645b2fe86320776280af89557c0c459a
     home: https://github.com/rh-aiservices-bu/litemaas
     keywords:
     - litemaas
@@ -483,4 +483,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-24T18:58:29.177231595Z"
+generated: "2026-03-24T22:18:30.22329+03:00"
