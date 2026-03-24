@@ -154,6 +154,40 @@ streamlit run app.py
 
 ## Guardrails Architecture
 
+### Upstream Llama Stack Safety Providers (What Exists Natively)
+
+Llama Stack has **no built-in regex provider** and **no native IBM detector support**:
+
+| Provider | Type | Needs Model? | Compatible with IBM detectors? |
+|----------|------|-------------|-------------------------------|
+| `inline::llama-guard` | Content moderation | Yes (Llama Guard model on vLLM) | No |
+| `inline::prompt-guard` | Prompt injection detection | Yes (transformers model) | No |
+| `inline::code-scanner` | Code vulnerability scanning | No (uses `codeshield` lib) | No |
+| `remote::passthrough` | Proxy to any HTTP service | No | **No** — calls `/moderations` (OpenAI format) |
+| `remote::bedrock` | AWS Bedrock safety | No (cloud API) | No |
+| `remote::nvidia` | NVIDIA NIM safety | No (cloud API) | No |
+
+### Why `remote::passthrough` Does NOT Work with IBM Detectors
+
+The APIs are completely different:
+
+| | Llama Stack `remote::passthrough` | IBM/FMS Guardrails Detectors |
+|--|----------------------------------|------------------------------|
+| Endpoint | `POST /moderations` | `POST /api/v1/text/contents` |
+| Request | `{"input": "text", "model": "shield_id"}` | `{"contents": ["text"], "detector_params": {"threshold": 0.5}}` |
+| Response | `{"results": [{"flagged": bool}]}` | `[[{"detection_type": "...", "score": 0.99}]]` |
+
+### The Solution: `remote::trusty_fms` (Custom Provider)
+
+The `genaiops/llama-stack-operator-instance` chart uses a **custom image** (`quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3`) that includes a `remote::trusty_fms` provider. This provider:
+
+1. Speaks the IBM/FMS Guardrails Orchestrator API natively
+2. Routes shield checks through the orchestrator to individual detectors
+3. Is NOT available in the standard `rh-dev` image — only in the custom FMS image
+4. Requires `external_providers_dir: /opt/app-root/src/.llama/providers.d/` in config
+
+Our chart was updated to use this image and provider when `guardrails.enabled=true`. When disabled, it falls back to the standard `rh-dev` image with `inline::llama-guard`.
+
 ### Flow (Server-Side)
 
 ```
@@ -186,6 +220,28 @@ Violation: [[{"text":"...","detection_type":"INJECTION","score":0.99,...}]]
 | `language_detection` | language-detector | Non-English text |
 | `regex` | Built-in regex | Custom patterns (e.g. `(?i).*fight club.*`) |
 
+### Regex Shield — Pattern Examples
+
+The regex shield is configured in the helm chart's `guardrails.regex.filter` array. Common patterns:
+
+| Name | Pattern | Use Case |
+|------|---------|----------|
+| Block SSNs | `\b\d{3}-\d{2}-\d{4}\b` | Filter social security numbers |
+| Block Emails | `\b[\w.-]+@[\w.-]+\.\w+\b` | Filter email addresses |
+| Block Phone Numbers | `\b\d{3}[-.]?\d{3}[-.]?\d{4}\b` | Filter phone numbers |
+| Block Keywords | `(?i).*(fight club|competitor).*` | Block specific words/phrases |
+| Profanity Filter | `\b(word1\|word2\|word3)\b` | Block profanity |
+
+Regex patterns are checked server-side by the guardrails orchestrator (no model needed). Configure via helm:
+```yaml
+guardrails:
+  regex:
+    enabled: true
+    filter:
+      - "(?i).*fight club.*"
+      - "\\b\\d{3}-\\d{2}-\\d{4}\\b"
+```
+
 ### Testing Guardrails
 
 ```bash
@@ -214,9 +270,33 @@ The `rh-dev` image and the custom `llama-stack-vllm-milvus-fms` image use **diff
 
 `remote::milvus` provider requires a `token` field or it fails with `Field required`. Default is `root:Milvus`. Our chart sets this automatically. The genaiops chart also handles this.
 
-### Genaiops Chart Namespace Bug
+### Genaiops Chart Namespace Bug (remote::milvus)
 
-The `genaiops/llama-stack-operator-instance` chart conditionally includes `remote::milvus` only when the namespace contains "test" or "prod". Namespaces like `user1-canopy` get `inline::milvus` even with `rag.enabled=true`. **Our chart fixes this** by using `milvus.mode` (a simple value) instead of namespace-based conditionals.
+The `genaiops/llama-stack-operator-instance` chart has a template condition that only includes `remote::milvus` when the namespace contains "test" or "prod":
+
+```go
+{{- if and .Values.rag.enabled (or (contains "test" .Release.Namespace) (contains "prod" .Release.Namespace)) }}
+vector_io:
+- provider_id: milvus
+  provider_type: remote::milvus    # <-- only for test/prod namespaces
+{{- end }}
+```
+
+For namespaces like `user1-canopy`, `user2-canopy`, or any custom name, you get `inline::milvus` even with `rag.enabled=true`. This means:
+- The `rag-runtime` tool provider references `vectorio_provider: milvus` but the vector_io section may be missing or inline
+- File uploads to vector stores use embedded SQLite instead of the standalone Milvus service
+- Data is lost when the pod restarts (no persistent Milvus)
+
+**Our chart fixes this** by using `milvus.mode` (a simple value `inline` or `remote`) instead of namespace-based conditionals. Works in any namespace.
+
+### Genaiops Chart Missing vector_io Provider
+
+Even when the genaiops chart includes `vector_io` in the `apis` list and the `rag-runtime` references `vectorio_provider: milvus`, the actual `vector_io` provider section may be missing from `providers` due to the namespace conditional. This causes:
+```
+RuntimeError: Failed to resolve 'tool_runtime' provider 'rag-runtime':
+required dependency 'vector_io' is not available
+```
+Fix: ensure the vector_io provider is always included when rag is enabled (our chart does this).
 
 ### Custom Image and the Operator
 
