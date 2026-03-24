@@ -42,10 +42,20 @@ def documents_page():
                             provider_id=vector_io_provider,
                         )
                         vs_id = vs.get("id", "")
-                        st.success(f"Case **{case_name}** created ({vs_id})")
 
                         if uploaded_files:
-                            _upload_files_to_store(vs_id, uploaded_files)
+                            succeeded = _upload_files_to_store(vs_id, uploaded_files)
+                            if succeeded == 0:
+                                # All files failed — clean up the empty store
+                                try:
+                                    client.delete_vector_store(vs_id)
+                                except Exception:
+                                    pass
+                                st.error(f"Case **{case_name}** was not created — all files failed to process.")
+                            else:
+                                st.success(f"Case **{case_name}** created ({vs_id})")
+                        else:
+                            st.success(f"Case **{case_name}** created ({vs_id})")
                     except Exception as e:
                         st.error(f"Failed to create case: {e}")
 
@@ -68,8 +78,12 @@ def documents_page():
         vs_name = vs.get("name", vs_id)
         file_counts = vs.get("file_counts", {})
         total_files = file_counts.get("total", 0)
+        completed_files = file_counts.get("completed", 0)
+        failed_files = file_counts.get("failed", 0)
 
-        with st.expander(f"{vs_name} ({total_files} files)", expanded=False):
+        with st.expander(f"{vs_name} ({completed_files}/{total_files} files ready)", expanded=False):
+            if failed_files:
+                st.warning(f"{failed_files} file(s) failed to process.")
             st.caption(f"ID: `{vs_id}`")
             st.caption(f"Provider: `{vs.get('metadata', {}).get('provider_id', 'N/A')}`")
 
@@ -80,7 +94,9 @@ def documents_page():
                     st.markdown("**Files:**")
                     for f in files:
                         fname = f.get("filename", f.get("id", "unknown"))
-                        st.text(f"  {fname}")
+                        fstatus = f.get("status", "unknown")
+                        status_icon = {"completed": "✅", "failed": "❌", "in_progress": "⏳"}.get(fstatus, "❓")
+                        st.text(f"  {status_icon} {fname} ({fstatus})")
             except Exception:
                 pass
 
@@ -125,17 +141,29 @@ def documents_page():
 
 def _upload_files_to_store(vector_store_id, files):
     """Upload multiple files and attach them to a vector store."""
-    success = 0
+    succeeded = 0
+    failed = 0
     for f in files:
         try:
             uploaded = client.upload_file(f.name, f.getvalue())
             file_id = uploaded.get("id", "")
-            client.attach_file_to_vector_store(vector_store_id, file_id)
-            success += 1
+            result = client.attach_file_to_vector_store(vector_store_id, file_id)
+            status = result.get("status", "unknown")
+            if status == "failed":
+                failed += 1
+                last_error = result.get("last_error", {})
+                error_msg = last_error.get("message", "Unknown error") if last_error else "Unknown error"
+                st.error(f"File **{f.name}** failed to process: {error_msg}")
+            else:
+                succeeded += 1
         except Exception as e:
+            failed += 1
             st.error(f"Failed to upload {f.name}: {e}")
-    if success:
-        st.success(f"Uploaded {success}/{len(files)} file(s)")
+    if succeeded:
+        st.success(f"Uploaded {succeeded}/{len(files)} file(s) successfully.")
+    if failed and not succeeded:
+        st.error(f"All {failed} file(s) failed to process.")
+    return succeeded
 
 
 documents_page()

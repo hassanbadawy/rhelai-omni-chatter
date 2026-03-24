@@ -1,2 +1,2 @@
-export LLAMA_STACK_API_ENDPOINT="https://llama-4-scout-17b-rag.apps.cluster-c7rxj.c7rxj.sandbox508.opentlc.com"
+export LLAMA_STACK_API_ENDPOINT="https://llama-stack-user1-canopy.apps.ocp.9xgvv.sandbox3434.opentlc.com"
 streamlit run app.py
