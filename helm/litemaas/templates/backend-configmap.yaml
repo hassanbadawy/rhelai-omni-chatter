@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "litemaas.backend.fullname" . }}-config
+  labels:
+    {{- include "litemaas.componentLabels" (dict "context" . "component" "api") | nindent 4 }}
+data:
+  HOST: "0.0.0.0"
+  PORT: "8080"
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  # Authentication provider: 'openshift' (default) or 'oidc' (standard OpenID Connect)
+  # When set to 'oidc', the backend validates OIDC discovery connectivity on startup
+  AUTH_PROVIDER: {{ .Values.oauth.authProvider | default "openshift" | quote }}
+  JWT_EXPIRES_IN: {{ .Values.backend.auth.jwtExpiresIn | quote }}
+  OIDC_GROUPS_CLAIM: {{ .Values.oauth.oidc.groupsClaim | default "groups" | quote }}
+  {{- if .Values.oauth.oidc.scopes }}
+  OIDC_SCOPES: {{ .Values.oauth.oidc.scopes | quote }}
+  {{- end }}
+  RATE_LIMIT_MAX: {{ .Values.backend.rateLimit.max | quote }}
+  RATE_LIMIT_TIME_WINDOW: {{ .Values.backend.rateLimit.timeWindow | quote }}
+  DEFAULT_USER_MAX_BUDGET: {{ .Values.backend.defaultUser.maxBudget | quote }}
+  DEFAULT_USER_TPM_LIMIT: {{ .Values.backend.defaultUser.tpmLimit | quote }}
+  DEFAULT_USER_RPM_LIMIT: {{ .Values.backend.defaultUser.rpmLimit | quote }}
+  {{- $initialAdmins := include "litemaas.initialAdminUsers" . }}
+  {{- if $initialAdmins }}
+  INITIAL_ADMIN_USERS: {{ $initialAdmins | quote }}
+  {{- end }}
+  LITELLM_API_URL: {{ include "litemaas.litellm.url" . | quote }}
+  {{- $redisHost := include "litemaas.redis.host" . }}
+  {{- if $redisHost }}
+  REDIS_HOST: {{ $redisHost | quote }}
+  REDIS_PORT: {{ .Values.backend.redis.port | quote }}
+  {{- end }}
+  {{- if .Values.backend.backup.storagePath }}
+  BACKUP_STORAGE_PATH: {{ .Values.backend.backup.storagePath | quote }}
+  {{- end }}
+  {{- if ne (.Values.backend.nodeTlsRejectUnauthorized | toString) "" }}
+  NODE_TLS_REJECT_UNAUTHORIZED: {{ .Values.backend.nodeTlsRejectUnauthorized | quote }}
+  {{- end }}
+  {{- if .Values.backend.auth.k8sApiSkipTlsVerify }}
+  K8S_API_SKIP_TLS_VERIFY: {{ .Values.backend.auth.k8sApiSkipTlsVerify | quote }}
+  {{- end }}
