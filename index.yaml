@@ -202,6 +202,26 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/langflow-0.1.0/langflow-0.1.0.tgz
     version: 0.1.0
+  litemaas:
+  - apiVersion: v2
+    appVersion: 0.4.0
+    created: "2026-03-24T18:58:29.177192772Z"
+    description: LiteMaaS - Model subscription and management platform with LiteLLM
+      integration
+    digest: a18acca19b2f6e0b967a6eb2b9e20a709c22b31729610122491686760ce00e8f
+    home: https://github.com/rh-aiservices-bu/litemaas
+    keywords:
+    - litemaas
+    - litellm
+    - ai
+    - model-management
+    maintainers:
+    - name: LiteMaaS Team
+    name: litemaas
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/litemaas-0.1.0/litemaas-0.1.0.tgz
+    version: 0.1.0
   llama-stack:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -463,4 +483,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-24T21:37:41.610402+03:00"
+generated: "2026-03-24T18:58:29.177231595Z"
