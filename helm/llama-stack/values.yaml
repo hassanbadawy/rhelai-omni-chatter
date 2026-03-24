@@ -1,4 +1,7 @@
 distribution: rh-dev
+
+# -- Custom image with trusty_fms safety provider (guardrails support)
+image: "quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3"
 replicas: 1
 port: 8321
 
@@ -25,6 +28,20 @@ embedding:
   modelId: granite-embedding-125m
   providerModelId: ibm-granite/granite-embedding-125m-english
   dimension: 768
+
+# -- Guardrails (requires guardrails-orchestrator deployed in same namespace)
+guardrails:
+  enabled: false
+  orchestratorUrl: "https://guardrails-orchestrator:8080"
+  regex:
+    enabled: false
+    filter: ["(?i).*fight club.*"]
+  hap:
+    enabled: false
+  prompt_injection:
+    enabled: false
+  language_detection:
+    enabled: false
 
 # -- Milvus vector database
 # mode: "inline" (embedded, no external service needed)

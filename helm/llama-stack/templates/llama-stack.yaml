@@ -7,6 +7,176 @@ metadata:
     opendatahub.io/dashboard: "true"
 data:
   config.yaml: |
+{{- if .Values.guardrails.enabled }}
+    version: '2'
+    image_name: vllm
+    apis:
+    - agents
+    - datasetio
+    - eval
+    - files
+    - inference
+    - safety
+    - shields
+    - scoring
+    - tool_runtime
+    - vector_io
+    providers:
+      safety:
+      - provider_id: trusty_fms
+        provider_type: remote::trusty_fms
+        config:
+          orchestrator_url: {{ .Values.guardrails.orchestratorUrl }}
+          verify_ssl: false
+          {{- if or .Values.guardrails.regex.enabled .Values.guardrails.hap.enabled .Values.guardrails.prompt_injection.enabled .Values.guardrails.language_detection.enabled }}
+          shields:
+            {{- if .Values.guardrails.regex.enabled }}
+            regex:
+              detectors:
+                regex_competitor:
+                  detector_params:
+                    regex: [{{- range $i, $f := .Values.guardrails.regex.filter }}{{ if $i }}, {{ end }}{{ $f | quote }}{{- end }}]
+              type: content
+              confidence_threshold: 0.5
+              message_types: ["user", "system", "completion"]
+            {{- end }}
+            {{- if .Values.guardrails.hap.enabled }}
+            hap:
+              type: content
+              confidence_threshold: 0.5
+              message_types: ["user", "system", "completion"]
+              detectors:
+                hap:
+                  detector_params: {}
+            {{- end }}
+            {{- if .Values.guardrails.language_detection.enabled }}
+            language_detection:
+              type: content
+              confidence_threshold: 0.5
+              message_types: ["user", "system", "completion"]
+              detectors:
+                language_detection:
+                  detector_params: {}
+            {{- end }}
+            {{- if .Values.guardrails.prompt_injection.enabled }}
+            prompt_injection:
+              type: content
+              confidence_threshold: 0.5
+              message_types: ["user", "system", "completion"]
+              detectors:
+                prompt_injection:
+                  detector_params: {}
+            {{- end }}
+          {{- end }}
+      inference:
+      - provider_id: sentence-transformers
+        provider_type: inline::sentence-transformers
+        config: {}
+      - provider_id: vllm
+        provider_type: remote::vllm
+        config:
+          url: {{ .Values.vllm.url }}
+          {{- if .Values.vllm.apiToken }}
+          api_token: {{ .Values.vllm.apiToken }}
+          {{- end }}
+      agents:
+      - provider_id: meta-reference
+        provider_type: inline::meta-reference
+        config:
+          persistence_store:
+            type: sqlite
+            db_path: /opt/app-root/src/.llama/distributions/rh/agents_store.db
+          responses_store:
+            type: sqlite
+            db_path: /opt/app-root/src/.llama/distributions/rh/responses_store.db
+      eval:
+      - provider_id: meta-reference
+        provider_type: inline::meta-reference
+        config:
+          kvstore:
+            type: sqlite
+            namespace: null
+            db_path: /opt/app-root/src/.llama/distributions/rh/eval_store.db
+      datasetio:
+      - provider_id: huggingface
+        provider_type: remote::huggingface
+        config:
+          kvstore:
+            type: sqlite
+            namespace: null
+            db_path: /opt/app-root/src/.llama/distributions/rh/huggingface_datasetio.db
+      files:
+      - provider_id: local-files
+        provider_type: inline::localfs
+        config:
+          storage_dir: /opt/app-root/src/.llama/distributions/rh/files
+          create_if_missing: true
+          metadata_store:
+            type: sqlite
+            db_path: /opt/app-root/src/.llama/distributions/rh/files_metadata.db
+      scoring:
+      - provider_id: basic
+        provider_type: inline::basic
+        config: {}
+      - provider_id: llm-as-judge
+        provider_type: inline::llm-as-judge
+        config: {}
+      tool_runtime:
+      - provider_id: rag-runtime
+        provider_type: inline::rag-runtime
+        config: {}
+      - provider_id: model-context-protocol
+        provider_type: remote::model-context-protocol
+        config: {}
+      vector_io:
+      - provider_id: milvus
+        {{- if eq .Values.milvus.mode "remote" }}
+        provider_type: remote::milvus
+        config:
+          uri: {{ .Values.milvus.endpoint }}
+          token: {{ .Values.milvus.token | default "root:Milvus" | quote }}
+          kvstore:
+            type: sqlite
+            db_path: ${env.SQLITE_STORE_DIR:={{ .Values.configDir }}}/milvus_registry.db
+        {{- else }}
+        provider_type: inline::milvus
+        config:
+          db_path: ${env.MILVUS_DB_PATH:={{ .Values.configDir }}}/milvus.db
+          kvstore:
+            type: sqlite
+            db_path: ${env.SQLITE_STORE_DIR:={{ .Values.configDir }}}/milvus_registry.db
+        {{- end }}
+    models:
+    - provider_id: sentence-transformers
+      model_id: {{ .Values.embedding.modelId }}
+      provider_model_id: {{ .Values.embedding.providerModelId }}
+      model_type: embedding
+      metadata:
+        embedding_dimension: {{ .Values.embedding.dimension }}
+    external_providers_dir: /opt/app-root/src/.llama/providers.d/
+    shields:
+    {{- if .Values.guardrails.regex.enabled }}
+    - shield_id: regex
+      provider_id: trusty_fms
+    {{- end }}
+    {{- if .Values.guardrails.hap.enabled }}
+    - shield_id: hap
+      provider_id: trusty_fms
+    {{- end }}
+    {{- if .Values.guardrails.prompt_injection.enabled }}
+    - shield_id: prompt_injection
+      provider_id: trusty_fms
+    {{- end }}
+    {{- if .Values.guardrails.language_detection.enabled }}
+    - shield_id: language_detection
+      provider_id: trusty_fms
+    {{- end }}
+    tool_groups:
+    - toolgroup_id: builtin::rag
+      provider_id: rag-runtime
+    server:
+      port: {{ .Values.port }}
+{{- else }}
     version: "2"
     image_name: rh
     apis:
@@ -23,7 +193,8 @@ data:
       inference:
       - provider_id: sentence-transformers
         provider_type: inline::sentence-transformers
-        config: {}
+        config:
+          trust_remote_code: true
       - provider_id: vllm
         provider_type: remote::vllm
         config:
@@ -33,22 +204,25 @@ data:
           max_tokens: {{ .Values.vllm.maxTokens }}
       vector_io:
       - provider_id: milvus
+        {{- if eq .Values.milvus.mode "remote" }}
+        provider_type: remote::milvus
+        config:
+          uri: {{ .Values.milvus.endpoint }}
+          token: {{ .Values.milvus.token | default "root:Milvus" | quote }}
+          kvstore:
+            backend: default
+            namespace: "milvus"
+        {{- else }}
         provider_type: inline::milvus
         config:
-          {{- if eq .Values.milvus.mode "remote" }}
-          uri: {{ .Values.milvus.endpoint }}
-          {{- if .Values.milvus.token }}
-          token: {{ .Values.milvus.token }}
-          {{- end }}
-          {{- else }}
           db_path: {{ .Values.configDir }}/milvus.db
-          {{- end }}
           kvstore:
             backend: default
             namespace: "milvus"
           persistence:
             backend: default
             namespace: "milvus_persistence"
+        {{- end }}
       agents:
       - provider_id: meta-reference
         provider_type: inline::meta-reference
@@ -156,6 +330,7 @@ data:
       provider_id: rag-runtime
     server:
       port: {{ .Values.port }}
+{{- end }}
 ---
 apiVersion: llamastack.io/v1alpha1
 kind: LlamaStackDistribution
@@ -165,7 +340,11 @@ spec:
   replicas: {{ .Values.replicas }}
   server:
     distribution:
+      {{- if and .Values.guardrails.enabled .Values.image }}
+      image: {{ .Values.image | quote }}
+      {{- else }}
       name: {{ .Values.distribution }}
+      {{- end }}
     userConfig:
       configMapName: llama-stack-config
     containerSpec:
@@ -185,6 +364,14 @@ spec:
           value: {{ .Values.vllm.maxTokens | quote }}
         - name: LLAMA_STACK_CONFIG_DIR
           value: {{ .Values.configDir }}
+        {{- if .Values.guardrails.enabled }}
+        - name: FMS_VERIFY_SSL
+          value: "false"
+        - name: MILVUS_DB_PATH
+          value: /opt/app-root/src/.llama/distributions/rh
+        - name: SQLITE_STORE_DIR
+          value: /opt/app-root/src/.llama/distributions/rh
+        {{- end }}
       resources:
         {{- toYaml .Values.resources | nindent 8 }}
 ---

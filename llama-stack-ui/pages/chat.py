@@ -258,7 +258,7 @@ def chat_page():
             vector_stores = client.get_vector_stores()
             if vector_stores:
                 vs_options = {
-                    vs["id"]: f"{vs.get('name', vs['id'])} ({vs.get('file_counts', {}).get('total', 0)} files)"
+                    vs["id"]: f"{vs.get('name', vs['id'])} ({vs.get('file_counts', {}).get('completed', 0)}/{vs.get('file_counts', {}).get('total', 0)} files ready)"
                     for vs in vector_stores
                 }
                 vs_ids = list(vs_options.keys())
@@ -333,6 +333,33 @@ def chat_page():
                     f"QUERY:\n{prompt}"
                 )
 
+        # --- Input shields check (server-side via Llama Stack) ---
+        input_shields = config.get("input_shields", [])
+        if config.get("safety_enabled") and input_shields:
+            input_blocked = False
+            for shield_id in input_shields:
+                try:
+                    violation = client.run_shield(
+                        shield_id,
+                        [{"role": "user", "content": input_text}],
+                    )
+                    if violation:
+                        level = violation.get("violation_level", "error")
+                        meta = violation.get("metadata", {})
+                        if meta.get("status") == "violation":
+                            st.error(
+                                f"**{shield_id}** blocked input: "
+                                f"{violation.get('user_message', 'Content violation detected')}"
+                            )
+                            input_blocked = True
+                except Exception as e:
+                    st.warning(f"Shield '{shield_id}' check failed: {e}")
+
+            if input_blocked:
+                with st.chat_message("assistant"):
+                    st.error("Message blocked by safety guardrails. Please rephrase your message.")
+                return
+
         with st.chat_message("assistant"):
             if retrieval_output:
                 with st.expander("Retrieval Output", expanded=False):
@@ -364,6 +391,28 @@ def chat_page():
                 full_response = f"Error: {e}"
                 message_placeholder.error(full_response)
 
+            # --- Output shields check ---
+            output_shields = config.get("output_shields", [])
+            if config.get("safety_enabled") and output_shields and full_response:
+                for shield_id in output_shields:
+                    try:
+                        violation = client.run_shield(
+                            shield_id,
+                            [{"role": "assistant", "content": full_response}],
+                        )
+                        if violation:
+                            meta = violation.get("metadata", {})
+                            if meta.get("status") == "violation":
+                                message_placeholder.markdown(
+                                    "*Response blocked by safety guardrails.*"
+                                )
+                                st.error(
+                                    f"**{shield_id}** blocked response: "
+                                    f"{violation.get('user_message', 'Content violation detected')}"
+                                )
+                    except Exception as e:
+                        st.warning(f"Output shield '{shield_id}' check failed: {e}")
+
             # Register new conversation in conversations.json on first message
             if new_response_id:
                 if not active_key:
@@ -386,6 +435,8 @@ def chat_page():
         st.rerun()
 
     if st.session_state.get("pending_prompt"):
+        with st.chat_message("user"):
+            st.markdown(st.session_state.pending_prompt)
         process_prompt(st.session_state.pending_prompt)
         st.session_state.pending_prompt = None
 

@@ -110,10 +110,67 @@ def settings_page():
 
     saved_vio = config.get("vector_io_provider", "")
     if vector_io_providers:
-        vio_index = vector_io_providers.index(saved_vio) if saved_vio in vector_io_providers else 0
-        selected_vio = st.selectbox("Vector IO Provider", vector_io_providers, index=vio_index)
+        vio_ids = [p["provider_id"] for p in vector_io_providers]
+        vio_labels = [f"{p['provider_id']} ({p['provider_type']})" for p in vector_io_providers]
+        vio_index = vio_ids.index(saved_vio) if saved_vio in vio_ids else 0
+        selected_vio = st.selectbox(
+            "Vector IO Provider",
+            options=vio_ids,
+            format_func=lambda x: vio_labels[vio_ids.index(x)],
+            index=vio_index,
+        )
     else:
         selected_vio = saved_vio
+
+    st.divider()
+
+    # --- Safety / Guardrails ---
+    st.subheader("Safety Guardrails")
+    safety_enabled = st.toggle(
+        "Enable Safety Guardrails",
+        value=config.get("safety_enabled", False),
+    )
+
+    input_shields = []
+    output_shields = []
+
+    if safety_enabled:
+        st.caption("Shields are managed server-side by Llama Stack. "
+                   "Select which shields to run on input and output messages.")
+
+        # Fetch shields from Llama Stack
+        shields = []
+        try:
+            shields = client.get_shields_from(url)
+        except Exception:
+            pass
+
+        if shields:
+            shield_ids = [s.get("identifier") or s.get("shield_id") or s.get("id", "") for s in shields]
+            shield_labels = {}
+            for s in shields:
+                sid = s.get("identifier") or s.get("shield_id") or s.get("id", "")
+                provider = s.get("provider_id", "")
+                shield_labels[sid] = f"{sid} ({provider})" if provider else sid
+
+            saved_input = config.get("input_shields", [])
+            saved_output = config.get("output_shields", [])
+
+            input_shields = st.multiselect(
+                "Input Shields (check user messages before sending to LLM)",
+                options=shield_ids,
+                default=[s for s in saved_input if s in shield_ids],
+                format_func=lambda x: shield_labels.get(x, x),
+            )
+            output_shields = st.multiselect(
+                "Output Shields (check LLM responses before displaying)",
+                options=shield_ids,
+                default=[s for s in saved_output if s in shield_ids],
+                format_func=lambda x: shield_labels.get(x, x),
+            )
+        else:
+            st.info("No shields available on this endpoint. "
+                    "Deploy Llama Stack with guardrails enabled to use shields.")
 
     st.divider()
 
@@ -155,6 +212,9 @@ def settings_page():
             "embedding_model": selected_embedding,
             "embedding_dimension": embedding_dimension,
             "vector_io_provider": selected_vio,
+            "safety_enabled": safety_enabled,
+            "input_shields": input_shields,
+            "output_shields": output_shields,
             "language": language,
             "system_prompt": system_prompt,
             "temperature": temperature,

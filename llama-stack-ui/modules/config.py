@@ -17,6 +17,9 @@ DEFAULTS = {
     "temperature": 0.7,
     "top_p": 0.9,
     "max_tokens": 1024,
+    "safety_enabled": False,
+    "input_shields": [],
+    "output_shields": [],
 }
 
 
