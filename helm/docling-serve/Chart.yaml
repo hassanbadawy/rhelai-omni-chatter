@@ -1,0 +1,16 @@
+apiVersion: v2
+name: docling-serve
+description: Docling Serve — GPU-accelerated document conversion service (PDF, DOCX, images to markdown/JSON) for RAG pipelines
+type: application
+version: 0.1.0
+appVersion: "0.7.0"
+icon: https://avatars.githubusercontent.com/u/151674099
+keywords:
+  - docling
+  - document-conversion
+  - pdf
+  - rag
+  - openshift
+  - gpu
+maintainers:
+  - name: hasanbadawy

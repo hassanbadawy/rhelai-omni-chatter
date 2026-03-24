@@ -1,0 +1,47 @@
+# -- Docling Serve Configuration
+# GPU-accelerated document conversion (PDF, DOCX, images → markdown/JSON)
+
+replicas: 1
+
+image:
+  repository: ghcr.io/docling-project/docling-serve-cu124
+  tag: "v0.7.0"
+  pullPolicy: IfNotPresent
+
+# -- Server settings
+server:
+  port: 5001
+  # -- Number of uvicorn workers
+  workers: 3
+  # -- Enable built-in web UI
+  enableUI: true
+
+# -- GPU configuration
+gpu:
+  # -- Request GPU (set to false for CPU-only mode)
+  enabled: true
+  # -- Number of GPUs
+  count: 1
+  # -- GPU toleration value (e.g. "g4dn" for T4, "g5" for A10G)
+  tolerationValue: "g4dn"
+
+# -- Resource limits
+resources:
+  requests:
+    cpu: "4"
+    memory: 8Gi
+  limits:
+    cpu: "6"
+    memory: 24Gi
+
+# -- Shared memory size for GPU processing
+shmSize: 2Gi
+
+# -- OpenShift route
+route:
+  enabled: true
+
+# -- Service type
+service:
+  type: ClusterIP
+  port: 80
