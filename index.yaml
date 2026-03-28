@@ -227,10 +227,10 @@ entries:
   litemaas:
   - apiVersion: v2
     appVersion: 0.4.0
-    created: "2026-03-28T20:42:07.056452865Z"
+    created: "2026-03-28T23:43:16.248317+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
-    digest: a5a7ccd261172f1c58551873bd5ea915efb72e32702e34388ae82ab3e5f246db
+    digest: ea0999945751806ca246630628bd40c709b3f5a4df6736dcd684edbe33d34c32
     home: https://github.com/rh-aiservices-bu/litemaas
     keywords:
     - litemaas
@@ -524,4 +524,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-28T20:42:07.056490104Z"
+generated: "2026-03-28T23:43:16.247588+03:00"
