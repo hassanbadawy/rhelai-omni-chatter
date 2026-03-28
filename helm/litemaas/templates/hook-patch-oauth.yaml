@@ -60,6 +60,8 @@ spec:
               value: {{ include "litemaas.litellm.fullname" . | quote }}
             - name: LITELLM_ROUTE_ENABLED
               value: {{ if .Values.route.litellm.enabled }}"true"{{ else }}"false"{{ end }}
+            - name: LITELLM_SSO_ENABLED
+              value: {{ if .Values.litellm.sso.enabled }}"true"{{ else }}"false"{{ end }}
           command:
             - /bin/sh
             - -c
@@ -180,13 +182,37 @@ spec:
               fi
               echo ""
 
+              # ── Step 4c: Register LiteLLM SSO redirect URI ──────────
+              if [ "$LITELLM_SSO_ENABLED" = "true" ] && [ -n "$LITELLM_HOST" ]; then
+                  SSO_CALLBACK="https://${LITELLM_HOST}/sso/callback"
+                  echo "Step 4c: Registering LiteLLM SSO callback → $SSO_CALLBACK"
+                  kubectl annotate serviceaccount "$SA_NAME" -n "$NAMESPACE" \
+                      "serviceaccounts.openshift.io/oauth-redirecturi.litellm-sso=${SSO_CALLBACK}" \
+                      --overwrite
+                  echo "  Done."
+
+                  # Also patch PROXY_BASE_URL in LiteLLM deployment
+                  LITELLM_URL="https://${LITELLM_HOST}"
+                  kubectl set env deployment/"$LITELLM_ROUTE_NAME" -n "$NAMESPACE" \
+                      PROXY_BASE_URL="${LITELLM_URL}"
+                  NEED_RESTART="true"
+              elif [ "$LITELLM_SSO_ENABLED" = "true" ]; then
+                  echo "Step 4c: Skipped (LiteLLM Route host not found for SSO callback)."
+              else
+                  echo "Step 4c: Skipped (LiteLLM SSO not enabled)."
+              fi
+              echo ""
+
               # ── Step 5: Restart backend ──────────────────────────────────
               if [ "$NEED_RESTART" = "true" ]; then
-                  echo "Step 5: Restarting backend deployment..."
+                  echo "Step 5: Restarting deployments..."
                   kubectl rollout restart deployment/"$DEPLOY_NAME" -n "$NAMESPACE"
+                  if [ "$LITELLM_SSO_ENABLED" = "true" ]; then
+                      kubectl rollout restart deployment/"$LITELLM_ROUTE_NAME" -n "$NAMESPACE"
+                  fi
                   echo "  Done."
               else
-                  echo "Step 5: Skipped (no Secret changes)."
+                  echo "Step 5: Skipped (no changes)."
               fi
 
               echo ""

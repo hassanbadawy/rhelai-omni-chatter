@@ -66,6 +66,35 @@ spec:
             - name: REDIS_PORT
               value: {{ .Values.backend.redis.port | quote }}
             {{- end }}
+            {{- if .Values.litellm.sso.enabled }}
+            # SSO Configuration
+            - name: PROXY_BASE_URL
+              value: {{ include "litemaas.litellm.url" . | quote }}
+            - name: GENERIC_CLIENT_ID
+              value: {{ include "litemaas.oauth.clientId" . | quote }}
+            - name: GENERIC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if eq .Values.oauth.mode "serviceaccount" }}
+                  name: {{ include "litemaas.oauth.tokenSecretName" . }}
+                  key: token
+                  {{- else }}
+                  name: {{ include "litemaas.backend.secretName" . }}
+                  key: oauth-client-secret
+                  {{- end }}
+            - name: GENERIC_AUTHORIZATION_ENDPOINT
+              value: {{ include "litemaas.litellm.sso.authorizationEndpoint" . | quote }}
+            - name: GENERIC_TOKEN_ENDPOINT
+              value: {{ include "litemaas.litellm.sso.tokenEndpoint" . | quote }}
+            - name: GENERIC_USERINFO_ENDPOINT
+              value: {{ include "litemaas.litellm.sso.userinfoEndpoint" . | quote }}
+            - name: GENERIC_SCOPE
+              value: {{ include "litemaas.litellm.sso.scope" . | quote }}
+            {{- if .Values.litellm.sso.adminId }}
+            - name: PROXY_ADMIN_ID
+              value: {{ .Values.litellm.sso.adminId | quote }}
+            {{- end }}
+            {{- end }}
           resources:
             {{- toYaml .Values.litellm.resources | nindent 12 }}
           livenessProbe:

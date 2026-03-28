@@ -153,6 +153,17 @@ litellm:
     # Must contain keys: database-url, master-key, ui-username, ui-password
     existingSecret: ""
 
+  # -- SSO configuration for LiteLLM Admin UI.
+  # Uses the same OAuth provider as the main app (OpenShift SA or external OIDC).
+  sso:
+    # -- Enable SSO login on LiteLLM UI (replaces username/password login)
+    enabled: false
+    # -- LiteLLM proxy admin user ID. Set after first SSO login.
+    # Find your user ID in the LiteLLM UI after logging in via SSO.
+    adminId: ""
+    # -- OAuth scope. "user:info" for OpenShift, "openid profile email" for standard OIDC.
+    scope: ""
+
   resources:
     requests:
       memory: "512Mi"

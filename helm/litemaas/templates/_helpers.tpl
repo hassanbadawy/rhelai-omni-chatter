@@ -204,6 +204,66 @@ For serviceaccount mode, this is read from the SA token secret at runtime
 {{- end }}
 {{- end }}
 
+{{/* ========== LiteLLM SSO helpers ========== */}}
+
+{{/*
+LiteLLM SSO authorization endpoint — derived from the OAuth issuer.
+OpenShift: <issuer>/oauth/authorize
+OIDC: <issuer>/protocol/openid-connect/auth (or use .well-known discovery)
+*/}}
+{{- define "litemaas.litellm.sso.authorizationEndpoint" -}}
+{{- $issuer := include "litemaas.oauth.issuer" . }}
+{{- if $issuer }}
+{{- if eq .Values.oauth.authProvider "openshift" }}
+{{- printf "%s/oauth/authorize" $issuer }}
+{{- else }}
+{{- printf "%s/protocol/openid-connect/auth" $issuer }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+LiteLLM SSO token endpoint — derived from the OAuth issuer.
+*/}}
+{{- define "litemaas.litellm.sso.tokenEndpoint" -}}
+{{- $issuer := include "litemaas.oauth.issuer" . }}
+{{- if $issuer }}
+{{- if eq .Values.oauth.authProvider "openshift" }}
+{{- printf "%s/oauth/token" $issuer }}
+{{- else }}
+{{- printf "%s/protocol/openid-connect/token" $issuer }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+LiteLLM SSO userinfo endpoint — derived from the OAuth issuer.
+OpenShift uses a non-standard userinfo endpoint.
+*/}}
+{{- define "litemaas.litellm.sso.userinfoEndpoint" -}}
+{{- $issuer := include "litemaas.oauth.issuer" . }}
+{{- if $issuer }}
+{{- if eq .Values.oauth.authProvider "openshift" }}
+{{- printf "%s/apis/user.openshift.io/v1/users/~" $issuer }}
+{{- else }}
+{{- printf "%s/protocol/openid-connect/userinfo" $issuer }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+LiteLLM SSO scope — "user:info" for OpenShift, "openid profile email" for OIDC.
+*/}}
+{{- define "litemaas.litellm.sso.scope" -}}
+{{- if .Values.litellm.sso.scope }}
+{{- .Values.litellm.sso.scope }}
+{{- else if eq .Values.oauth.authProvider "openshift" }}
+{{- "user:info" }}
+{{- else }}
+{{- "openid profile email" }}
+{{- end }}
+{{- end }}
+
 {{/* ========== Deployer / initial-admin helpers ========== */}}
 
 {{/*
