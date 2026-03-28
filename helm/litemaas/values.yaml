@@ -143,8 +143,8 @@ litellm:
   databaseUrl: ""
 
   auth:
-    # -- LiteLLM master/API key
-    masterKey: litemaas-llm-key-2026
+    # -- LiteLLM master/API key (must start with 'sk-' for LiteLLM DB mode)
+    masterKey: sk-litemaas-llm-key-2026
     # -- LiteLLM admin UI username
     uiUsername: admin
     # -- LiteLLM admin UI password
@@ -208,8 +208,8 @@ backend:
     # -- Initial admin users (comma-separated usernames).
     # On OpenShift, auto-detected from the deploying user if empty.
     initialAdminUsers: ""
-    # -- LiteLLM API key (must match litellm.auth.masterKey)
-    litellmApiKey: litemaas-llm-key-2026
+    # -- LiteLLM API key (must match litellm.auth.masterKey, must start with 'sk-')
+    litellmApiKey: sk-litemaas-llm-key-2026
     # -- Encryption key for stored model API keys (AES-256-GCM).
     # Falls back to litellmApiKey if empty. Recommended to set explicitly in production.
     litellmMasterKey: ""
