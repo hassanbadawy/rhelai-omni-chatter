@@ -36,12 +36,16 @@ guardrails:
   regex:
     enabled: false
     filter: ["(?i).*fight club.*"]
+    confidence_threshold: 0.5
   hap:
     enabled: false
+    confidence_threshold: 0.5
   prompt_injection:
     enabled: false
+    confidence_threshold: 0.5
   language_detection:
     enabled: false
+    confidence_threshold: 0.85
 
 # -- Milvus vector database
 # mode: "inline" (embedded, no external service needed)

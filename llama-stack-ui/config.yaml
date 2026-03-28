@@ -5,16 +5,10 @@ embedding_model: granite-embedding-125m
 embedding_dimension: 768
 vector_io_provider: milvus
 safety_enabled: true
-input_shields:
-- hap
-- prompt_injection
-- language_detection
-- regex
-output_shields:
-- hap
-- language_detection
+input_shields: []
+output_shields: []
 language: English
-system_prompt: you are a helpful assistant
+system_prompt: you are a helpful assistant, speak english only
 temperature: 0.1
 top_p: 0.9
 max_tokens: 1024

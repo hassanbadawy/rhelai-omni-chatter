@@ -37,13 +37,13 @@ data:
                   detector_params:
                     regex: [{{- range $i, $f := .Values.guardrails.regex.filter }}{{ if $i }}, {{ end }}{{ $f | quote }}{{- end }}]
               type: content
-              confidence_threshold: 0.5
+              confidence_threshold: {{ .Values.guardrails.regex.confidence_threshold }}
               message_types: ["user", "system", "completion"]
             {{- end }}
             {{- if .Values.guardrails.hap.enabled }}
             hap:
               type: content
-              confidence_threshold: 0.5
+              confidence_threshold: {{ .Values.guardrails.hap.confidence_threshold }}
               message_types: ["user", "system", "completion"]
               detectors:
                 hap:
@@ -52,7 +52,7 @@ data:
             {{- if .Values.guardrails.language_detection.enabled }}
             language_detection:
               type: content
-              confidence_threshold: 0.5
+              confidence_threshold: {{ .Values.guardrails.language_detection.confidence_threshold }}
               message_types: ["user", "system", "completion"]
               detectors:
                 language_detection:
@@ -61,7 +61,7 @@ data:
             {{- if .Values.guardrails.prompt_injection.enabled }}
             prompt_injection:
               type: content
-              confidence_threshold: 0.5
+              confidence_threshold: {{ .Values.guardrails.prompt_injection.confidence_threshold }}
               message_types: ["user", "system", "completion"]
               detectors:
                 prompt_injection:

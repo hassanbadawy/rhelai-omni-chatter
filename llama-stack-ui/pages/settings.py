@@ -133,6 +133,7 @@ def settings_page():
 
     input_shields = []
     output_shields = []
+    shields = []
 
     if safety_enabled:
         st.caption("Shields are managed server-side by Llama Stack. "
@@ -171,6 +172,37 @@ def settings_page():
         else:
             st.info("No shields available on this endpoint. "
                     "Deploy Llama Stack with guardrails enabled to use shields.")
+
+    # --- Regex Patterns (server-side reference) ---
+    has_regex_shield = any(
+        (s.get("identifier") or s.get("shield_id") or s.get("id", "")) == "regex"
+        for s in shields
+    )
+    if safety_enabled and has_regex_shield:
+        st.divider()
+        st.subheader("Regex Patterns")
+        st.caption(
+            "The regex shield runs server-side on the guardrails orchestrator. "
+            "Patterns are configured in the Helm chart deployment. "
+            "To update patterns, redeploy with updated `guardrails.regex.filter` values."
+        )
+        st.code(
+            "helm upgrade llama-stack helm/llama-stack/ \\\n"
+            "  --set guardrails.regex.enabled=true \\\n"
+            '  --set \'guardrails.regex.filter[0]=(?i).*fight club.*\' \\\n'
+            '  --set \'guardrails.regex.filter[1]=\\\\b\\\\d{3}-\\\\d{2}-\\\\d{4}\\\\b\'',
+            language="bash",
+        )
+        with st.expander("Common regex patterns"):
+            st.markdown(
+                "| Pattern | Use Case |\n"
+                "|---------|----------|\n"
+                "| `(?i).*fight club.*` | Block keywords (case-insensitive) |\n"
+                r"| `\b\d{3}-\d{2}-\d{4}\b` | Block SSN (xxx-xx-xxxx) |" "\n"
+                r"| `\b[\w.-]+@[\w.-]+\.\w+\b` | Block email addresses |" "\n"
+                r"| `\b\d{3}[-.]?\d{3}[-.]?\d{4}\b` | Block phone numbers |" "\n"
+                "| `(?i).*(bomb\\|explosive\\|weapon).*` | Block dangerous keywords |"
+            )
 
     st.divider()
 

@@ -398,7 +398,7 @@ def chat_page():
                     try:
                         violation = client.run_shield(
                             shield_id,
-                            [{"role": "assistant", "content": full_response}],
+                            [{"role": "user", "content": full_response}],
                         )
                         if violation:
                             meta = violation.get("metadata", {})
