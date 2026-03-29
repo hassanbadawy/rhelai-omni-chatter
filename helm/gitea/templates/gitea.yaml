@@ -1,0 +1,80 @@
+apiVersion: pfe.rhpds.com/v1
+kind: Gitea
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  giteaImageTag: {{ .Values.giteaImageTag | quote }}
+  giteaVolumeSize: {{ .Values.giteaVolumeSize }}
+  {{- if .Values.giteaVolumeStorageClass }}
+  giteaVolumeStorageClass: {{ .Values.giteaVolumeStorageClass }}
+  {{- end }}
+  giteaSsl: {{ .Values.giteaSsl }}
+  {{- if .Values.giteaHostname }}
+  giteaHostname: {{ .Values.giteaHostname }}
+  {{- end }}
+
+  # Resources
+  giteaMemoryRequest: {{ .Values.giteaMemoryRequest }}
+  giteaMemoryLimit: {{ .Values.giteaMemoryLimit }}
+  giteaCpuRequest: {{ .Values.giteaCpuRequest }}
+  giteaCpuLimit: {{ .Values.giteaCpuLimit }}
+
+  # HTTP/SSH
+  giteaHttpPort: {{ .Values.giteaHttpPort }}
+  giteaSshPort: {{ .Values.giteaSshPort }}
+  giteaDisableSsh: {{ .Values.giteaDisableSsh }}
+  giteaStartSshServer: {{ .Values.giteaStartSshServer }}
+
+  # Registration
+  giteaDisableRegistration: {{ .Values.giteaDisableRegistration }}
+  giteaEnableCaptcha: {{ .Values.giteaEnableCaptcha }}
+  giteaAllowCreateOrganization: {{ .Values.giteaAllowCreateOrganization }}
+
+  # Webhooks
+  giteaWebhookAllowedHostList: {{ .Values.giteaWebhookAllowedHostList | quote }}
+  giteaWebhookSkipTlsVerify: {{ .Values.giteaWebhookSkipTlsVerify }}
+
+  # PostgreSQL
+  postgresqlVolumeSize: {{ .Values.postgresqlVolumeSize }}
+  {{- if .Values.postgresqlVolumeStorageClass }}
+  postgresqlVolumeStorageClass: {{ .Values.postgresqlVolumeStorageClass }}
+  {{- end }}
+
+  {{- if .Values.giteaAdminUser }}
+  # Admin user
+  giteaAdminUser: {{ .Values.giteaAdminUser }}
+  giteaAdminEmail: {{ .Values.giteaAdminEmail | default "admin@example.com" }}
+  {{- if .Values.giteaAdminPassword }}
+  giteaAdminPassword: {{ .Values.giteaAdminPassword | quote }}
+  {{- end }}
+  giteaAdminPasswordLength: {{ .Values.giteaAdminPasswordLength }}
+  {{- end }}
+
+  {{- if .Values.giteaCreateUsers }}
+  # Bulk users
+  giteaCreateUsers: true
+  giteaUserNumber: {{ .Values.giteaUserNumber }}
+  giteaGenerateUserFormat: {{ .Values.giteaGenerateUserFormat | quote }}
+  {{- if .Values.giteaUserPassword }}
+  giteaUserPassword: {{ .Values.giteaUserPassword | quote }}
+  {{- end }}
+  giteaUserPasswordLength: {{ .Values.giteaUserPasswordLength }}
+  {{- end }}
+
+  {{- if .Values.giteaMigrateRepositories }}
+  # Repository migration
+  giteaMigrateRepositories: true
+  giteaRepositoriesList:
+    {{- toYaml .Values.giteaRepositoriesList | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.giteaMailerEnabled }}
+  # Email
+  giteaMailerEnabled: true
+  giteaMailerFrom: {{ .Values.giteaMailerFrom | quote }}
+  giteaMailerProtocol: {{ .Values.giteaMailerProtocol }}
+  giteaMailerHost: {{ .Values.giteaMailerHost | quote }}
+  giteaMailerPort: {{ .Values.giteaMailerPort }}
+  giteaMailerUser: {{ .Values.giteaMailerUser | quote }}
+  giteaMailerPassword: {{ .Values.giteaMailerPassword | quote }}
+  {{- end }}

@@ -1,0 +1,63 @@
+# Gitea instance configuration (requires gitea-operator installed on the cluster)
+# Operator install: oc apply -k https://github.com/rhpds/gitea-operator/OLMDeploy
+
+# Gitea server
+giteaImageTag: "1.21"
+giteaVolumeSize: 4Gi
+giteaVolumeStorageClass: ""
+giteaSsl: true
+giteaHostname: ""
+
+# Resources
+giteaMemoryRequest: 1Gi
+giteaMemoryLimit: 1Gi
+giteaCpuRequest: 200m
+giteaCpuLimit: 500m
+
+# HTTP/SSH
+giteaHttpPort: 3000
+giteaSshPort: 2022
+giteaDisableSsh: true
+giteaStartSshServer: false
+
+# Admin user
+giteaAdminUser: ""
+giteaAdminEmail: ""
+giteaAdminPassword: ""
+giteaAdminPasswordLength: 32
+
+# User registration
+giteaDisableRegistration: false
+giteaEnableCaptcha: false
+giteaAllowCreateOrganization: true
+
+# Bulk user creation
+giteaCreateUsers: false
+giteaUserNumber: 2
+giteaGenerateUserFormat: "user%d"
+giteaUserPassword: ""
+giteaUserPasswordLength: 16
+
+# Repository migration
+giteaMigrateRepositories: false
+giteaRepositoriesList: []
+# - repo: https://github.com/example/repo.git
+#   name: repo
+#   private: false
+
+# Webhooks
+giteaWebhookAllowedHostList: "external,private"
+giteaWebhookSkipTlsVerify: false
+
+# PostgreSQL (managed by the operator)
+postgresqlVolumeSize: 4Gi
+postgresqlVolumeStorageClass: ""
+
+# Email (disabled by default)
+giteaMailerEnabled: false
+giteaMailerFrom: ""
+giteaMailerProtocol: smtps
+giteaMailerHost: ""
+giteaMailerPort: 465
+giteaMailerUser: ""
+giteaMailerPassword: ""
