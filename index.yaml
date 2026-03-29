@@ -163,6 +163,25 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/docling-serve-0.1.0/docling-serve-0.1.0.tgz
     version: 0.1.0
+  gitea:
+  - apiVersion: v2
+    appVersion: "1.21"
+    created: "2026-03-29T17:58:36.433738618Z"
+    description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
+    digest: 461c0004e10bf5dfeb4b08335ddbf4508c1461016bfeb7c768ba33607fbb40b8
+    icon: https://about.gitea.com/gitea.png
+    keywords:
+    - gitea
+    - git
+    - scm
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: gitea
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/gitea-0.1.0/gitea-0.1.0.tgz
+    version: 0.1.0
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -562,4 +581,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-29T01:41:20.175195+03:00"
+generated: "2026-03-29T17:58:36.590893168Z"
