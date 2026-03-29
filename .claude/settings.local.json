@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(oc get:*)",
+      "Bash(oc logs:*)",
+      "Bash(oc debug:*)",
+      "Bash(git add:*)",
+      "Bash(gh run:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(source /Users/hasanbadawy/Documents/CODE/rhelai-omni-chatter/*)",
+      "Bash(helm template:*)",
+      "Bash(helm lint:*)",
+      "Bash(oc exec:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(./tests/test-llamastack.sh 2>&1)",
+      "WebFetch(domain:llamastack.github.io)",
+      "WebFetch(domain:developers.redhat.com)",
+      "WebFetch(domain:llama-stack.readthedocs.io)",
+      "Bash(oc login:*)",
+      "WebFetch(domain:docs.litellm.ai)"
+    ]
+  }
+}
