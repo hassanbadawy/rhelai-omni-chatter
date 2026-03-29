@@ -1,0 +1,20 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: gitea
+spec:
+  {{- if .Values.clusterDomain }}
+  host: {{ .Release.Name }}-{{ .Release.Namespace }}.apps.{{ .Values.clusterDomain }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ .Release.Name }}
+  port:
+    targetPort: {{ .Values.giteaHttpPort }}
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

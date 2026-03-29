@@ -1,5 +1,4 @@
-# Gitea instance configuration (requires gitea-operator installed on the cluster)
-# Operator install: oc apply -k https://github.com/rhpds/gitea-operator/OLMDeploy
+# Gitea instance configuration (operator is auto-installed by this chart)
 
 # Gitea server
 giteaImageTag: "1.21"
@@ -7,6 +6,11 @@ giteaVolumeSize: 4Gi
 giteaVolumeStorageClass: ""
 giteaSsl: true
 giteaHostname: ""
+
+# OpenShift Route
+route:
+  enabled: true
+clusterDomain: ""
 
 # Resources
 giteaMemoryRequest: 1Gi
