@@ -1,80 +1,137 @@
-apiVersion: pfe.rhpds.com/v1
-kind: Gitea
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ .Release.Name }}-gitea-installer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-gitea-installer
+rules:
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list"]
+  - apiGroups: ["pfe.rhpds.com"]
+    resources: ["gitea"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-gitea-installer
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-gitea-installer
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Release.Name }}-gitea-installer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-gitea-cr
+data:
+  gitea.yaml: |
+    apiVersion: pfe.rhpds.com/v1
+    kind: Gitea
+    metadata:
+      name: {{ .Release.Name }}
+      namespace: {{ .Release.Namespace }}
+    spec:
+      giteaImageTag: {{ .Values.giteaImageTag | quote }}
+      giteaVolumeSize: {{ .Values.giteaVolumeSize }}
+      {{- if .Values.giteaVolumeStorageClass }}
+      giteaVolumeStorageClass: {{ .Values.giteaVolumeStorageClass }}
+      {{- end }}
+      giteaSsl: {{ .Values.giteaSsl }}
+      {{- if .Values.giteaHostname }}
+      giteaHostname: {{ .Values.giteaHostname }}
+      {{- end }}
+      giteaMemoryRequest: {{ .Values.giteaMemoryRequest }}
+      giteaMemoryLimit: {{ .Values.giteaMemoryLimit }}
+      giteaCpuRequest: {{ .Values.giteaCpuRequest }}
+      giteaCpuLimit: {{ .Values.giteaCpuLimit }}
+      giteaHttpPort: {{ .Values.giteaHttpPort }}
+      giteaSshPort: {{ .Values.giteaSshPort }}
+      giteaDisableSsh: {{ .Values.giteaDisableSsh }}
+      giteaStartSshServer: {{ .Values.giteaStartSshServer }}
+      giteaDisableRegistration: {{ .Values.giteaDisableRegistration }}
+      giteaEnableCaptcha: {{ .Values.giteaEnableCaptcha }}
+      giteaAllowCreateOrganization: {{ .Values.giteaAllowCreateOrganization }}
+      giteaWebhookAllowedHostList: {{ .Values.giteaWebhookAllowedHostList | quote }}
+      giteaWebhookSkipTlsVerify: {{ .Values.giteaWebhookSkipTlsVerify }}
+      postgresqlVolumeSize: {{ .Values.postgresqlVolumeSize }}
+      {{- if .Values.postgresqlVolumeStorageClass }}
+      postgresqlVolumeStorageClass: {{ .Values.postgresqlVolumeStorageClass }}
+      {{- end }}
+      {{- if .Values.giteaAdminUser }}
+      giteaAdminUser: {{ .Values.giteaAdminUser }}
+      giteaAdminEmail: {{ .Values.giteaAdminEmail | default "admin@example.com" }}
+      {{- if .Values.giteaAdminPassword }}
+      giteaAdminPassword: {{ .Values.giteaAdminPassword | quote }}
+      {{- end }}
+      giteaAdminPasswordLength: {{ .Values.giteaAdminPasswordLength }}
+      {{- end }}
+      {{- if .Values.giteaCreateUsers }}
+      giteaCreateUsers: true
+      giteaUserNumber: {{ .Values.giteaUserNumber }}
+      giteaGenerateUserFormat: {{ .Values.giteaGenerateUserFormat | quote }}
+      {{- if .Values.giteaUserPassword }}
+      giteaUserPassword: {{ .Values.giteaUserPassword | quote }}
+      {{- end }}
+      giteaUserPasswordLength: {{ .Values.giteaUserPasswordLength }}
+      {{- end }}
+      {{- if .Values.giteaMigrateRepositories }}
+      giteaMigrateRepositories: true
+      giteaRepositoriesList:
+        {{- toYaml .Values.giteaRepositoriesList | nindent 8 }}
+      {{- end }}
+      {{- if .Values.giteaMailerEnabled }}
+      giteaMailerEnabled: true
+      giteaMailerFrom: {{ .Values.giteaMailerFrom | quote }}
+      giteaMailerProtocol: {{ .Values.giteaMailerProtocol }}
+      giteaMailerHost: {{ .Values.giteaMailerHost | quote }}
+      giteaMailerPort: {{ .Values.giteaMailerPort }}
+      giteaMailerUser: {{ .Values.giteaMailerUser | quote }}
+      giteaMailerPassword: {{ .Values.giteaMailerPassword | quote }}
+      {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-create-gitea
 spec:
-  giteaImageTag: {{ .Values.giteaImageTag | quote }}
-  giteaVolumeSize: {{ .Values.giteaVolumeSize }}
-  {{- if .Values.giteaVolumeStorageClass }}
-  giteaVolumeStorageClass: {{ .Values.giteaVolumeStorageClass }}
-  {{- end }}
-  giteaSsl: {{ .Values.giteaSsl }}
-  {{- if .Values.giteaHostname }}
-  giteaHostname: {{ .Values.giteaHostname }}
-  {{- end }}
-
-  # Resources
-  giteaMemoryRequest: {{ .Values.giteaMemoryRequest }}
-  giteaMemoryLimit: {{ .Values.giteaMemoryLimit }}
-  giteaCpuRequest: {{ .Values.giteaCpuRequest }}
-  giteaCpuLimit: {{ .Values.giteaCpuLimit }}
-
-  # HTTP/SSH
-  giteaHttpPort: {{ .Values.giteaHttpPort }}
-  giteaSshPort: {{ .Values.giteaSshPort }}
-  giteaDisableSsh: {{ .Values.giteaDisableSsh }}
-  giteaStartSshServer: {{ .Values.giteaStartSshServer }}
-
-  # Registration
-  giteaDisableRegistration: {{ .Values.giteaDisableRegistration }}
-  giteaEnableCaptcha: {{ .Values.giteaEnableCaptcha }}
-  giteaAllowCreateOrganization: {{ .Values.giteaAllowCreateOrganization }}
-
-  # Webhooks
-  giteaWebhookAllowedHostList: {{ .Values.giteaWebhookAllowedHostList | quote }}
-  giteaWebhookSkipTlsVerify: {{ .Values.giteaWebhookSkipTlsVerify }}
-
-  # PostgreSQL
-  postgresqlVolumeSize: {{ .Values.postgresqlVolumeSize }}
-  {{- if .Values.postgresqlVolumeStorageClass }}
-  postgresqlVolumeStorageClass: {{ .Values.postgresqlVolumeStorageClass }}
-  {{- end }}
-
-  {{- if .Values.giteaAdminUser }}
-  # Admin user
-  giteaAdminUser: {{ .Values.giteaAdminUser }}
-  giteaAdminEmail: {{ .Values.giteaAdminEmail | default "admin@example.com" }}
-  {{- if .Values.giteaAdminPassword }}
-  giteaAdminPassword: {{ .Values.giteaAdminPassword | quote }}
-  {{- end }}
-  giteaAdminPasswordLength: {{ .Values.giteaAdminPasswordLength }}
-  {{- end }}
-
-  {{- if .Values.giteaCreateUsers }}
-  # Bulk users
-  giteaCreateUsers: true
-  giteaUserNumber: {{ .Values.giteaUserNumber }}
-  giteaGenerateUserFormat: {{ .Values.giteaGenerateUserFormat | quote }}
-  {{- if .Values.giteaUserPassword }}
-  giteaUserPassword: {{ .Values.giteaUserPassword | quote }}
-  {{- end }}
-  giteaUserPasswordLength: {{ .Values.giteaUserPasswordLength }}
-  {{- end }}
-
-  {{- if .Values.giteaMigrateRepositories }}
-  # Repository migration
-  giteaMigrateRepositories: true
-  giteaRepositoriesList:
-    {{- toYaml .Values.giteaRepositoriesList | nindent 4 }}
-  {{- end }}
-
-  {{- if .Values.giteaMailerEnabled }}
-  # Email
-  giteaMailerEnabled: true
-  giteaMailerFrom: {{ .Values.giteaMailerFrom | quote }}
-  giteaMailerProtocol: {{ .Values.giteaMailerProtocol }}
-  giteaMailerHost: {{ .Values.giteaMailerHost | quote }}
-  giteaMailerPort: {{ .Values.giteaMailerPort }}
-  giteaMailerUser: {{ .Values.giteaMailerUser | quote }}
-  giteaMailerPassword: {{ .Values.giteaMailerPassword | quote }}
-  {{- end }}
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Release.Name }}-gitea-installer
+      containers:
+        - name: create-gitea
+          image: registry.redhat.io/openshift4/ose-cli:latest
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Waiting for Gitea CRD to be registered..."
+              for i in $(seq 1 60); do
+                if oc get crd gitea.pfe.rhpds.com >/dev/null 2>&1; then
+                  echo "CRD is ready! Creating Gitea instance..."
+                  oc apply -f /config/gitea.yaml
+                  echo "Gitea CR created successfully."
+                  exit 0
+                fi
+                echo "Attempt $i/60 - CRD not yet available, waiting 10s..."
+                sleep 10
+              done
+              echo "Timed out waiting for Gitea CRD after 10 minutes."
+              exit 1
+          volumeMounts:
+            - name: gitea-cr
+              mountPath: /config
+      volumes:
+        - name: gitea-cr
+          configMap:
+            name: {{ .Release.Name }}-gitea-cr
