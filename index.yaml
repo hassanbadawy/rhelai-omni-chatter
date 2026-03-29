@@ -166,6 +166,24 @@ entries:
   gitea:
   - apiVersion: v2
     appVersion: "1.21"
+    created: "2026-03-29T18:20:03.025730582Z"
+    description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
+    digest: 2fdc9df06afc93818a972fc0a86ae5ca37b388c25d7c51db2fcc943054755232
+    icon: https://about.gitea.com/gitea.png
+    keywords:
+    - gitea
+    - git
+    - scm
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: gitea
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/gitea-0.3.0/gitea-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: "1.21"
     created: "2026-03-29T18:15:04.335785917Z"
     description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
     digest: ba039a5e8e0749ecbe47a605243d52864dcaed099bf1fc7432c5f0c389d0f677
@@ -599,4 +617,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-29T18:15:04.335847893Z"
+generated: "2026-03-29T18:20:03.025799035Z"
