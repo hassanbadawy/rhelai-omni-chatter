@@ -147,6 +147,10 @@ data:
             db_path: ${env.SQLITE_STORE_DIR:={{ .Values.configDir }}}/milvus_registry.db
         {{- end }}
     models:
+    - provider_id: vllm
+      model_id: {{ .Values.vllm.modelId }}
+      provider_model_id: {{ .Values.vllm.modelId }}
+      model_type: llm
     - provider_id: sentence-transformers
       model_id: {{ .Values.embedding.modelId }}
       provider_model_id: {{ .Values.embedding.providerModelId }}
@@ -316,6 +320,10 @@ data:
           backend: kv_default
           namespace: "prompts"
     models:
+    - provider_id: vllm
+      model_id: {{ .Values.vllm.modelId }}
+      provider_model_id: {{ .Values.vllm.modelId }}
+      model_type: llm
     - provider_id: sentence-transformers
       model_id: {{ .Values.embedding.modelId }}
       provider_model_id: {{ .Values.embedding.providerModelId }}
