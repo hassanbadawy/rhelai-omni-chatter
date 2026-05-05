@@ -79,6 +79,7 @@ data:
           {{- if .Values.vllm.apiToken }}
           api_token: {{ .Values.vllm.apiToken }}
           {{- end }}
+          tls_verify: {{ .Values.vllm.tlsVerify }}
       agents:
       - provider_id: meta-reference
         provider_type: inline::meta-reference
