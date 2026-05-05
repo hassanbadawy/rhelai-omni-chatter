@@ -103,20 +103,4 @@ env:
 
 # Network Policy
 networkPolicy:
-  enabled: true
-  ingress:
-    - from:
-      - namespaceSelector:
-          matchLabels:
-            name: openshift-ingress
-      ports:
-      - protocol: TCP
-        port: 8501
-  egress:
-    - to:
-      - podSelector:
-          matchLabels:
-            app.kubernetes.io/name: llama-stack
-      ports:
-      - protocol: TCP
-        port: 80
+  enabled: false

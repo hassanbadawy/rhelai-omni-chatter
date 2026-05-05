@@ -155,22 +155,24 @@ data:
         embedding_dimension: {{ .Values.embedding.dimension }}
     external_providers_dir: /opt/app-root/src/.llama/providers.d/
     shields:
-    {{- if .Values.guardrails.regex.enabled }}
+    {{- $shieldsEmpty := true }}
+    {{- if .Values.guardrails.regex.enabled }}{{- $shieldsEmpty = false }}
     - shield_id: regex
       provider_id: trusty_fms
     {{- end }}
-    {{- if .Values.guardrails.hap.enabled }}
+    {{- if .Values.guardrails.hap.enabled }}{{- $shieldsEmpty = false }}
     - shield_id: hap
       provider_id: trusty_fms
     {{- end }}
-    {{- if .Values.guardrails.prompt_injection.enabled }}
+    {{- if .Values.guardrails.prompt_injection.enabled }}{{- $shieldsEmpty = false }}
     - shield_id: prompt_injection
       provider_id: trusty_fms
     {{- end }}
-    {{- if .Values.guardrails.language_detection.enabled }}
+    {{- if .Values.guardrails.language_detection.enabled }}{{- $shieldsEmpty = false }}
     - shield_id: language_detection
       provider_id: trusty_fms
     {{- end }}
+    {{- if $shieldsEmpty }} []{{- end }}
     tool_groups:
     - toolgroup_id: builtin::rag
       provider_id: rag-runtime

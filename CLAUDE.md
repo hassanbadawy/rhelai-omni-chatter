@@ -30,6 +30,7 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 ```
 ├── helm/
 │   ├── llama-stack/              # Llama Stack chart (guardrails + milvus + RAG)
+│   ├── llama-stack-playground/   # Streamlit playground UI chart (standalone, points at any Llama Stack)
 │   ├── guardrails-orchestrator/  # Orchestrator only — detectors NOT included (see below)
 │   ├── anythingllm/
 │   ├── dashy/
@@ -119,6 +120,35 @@ helm install llama-stack hassanbadawy/llama-stack
 ```
 
 To publish a new version: bump `Chart.yaml` version, `helm package`, `gh release create`, update `gh-pages` index.yaml via `helm repo index --merge`.
+
+## Helm Chart: llama-stack-playground (`helm/llama-stack-playground/`)
+
+A standalone Helm chart that deploys the Streamlit playground UI (`quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix`) as an OpenShift workload. It is **independent** of the `llama-stack` chart — it only needs a Llama Stack backend URL to connect to.
+
+### Key values
+
+| Value | Default | Purpose |
+|-------|---------|---------|
+| `playground.llamaStackUrl` | `http://llama-stack:8321` | Llama Stack backend URL — override to point at your llama-stack service |
+| `playground.defaultModel` | `meta-llama/Llama-3.2-3B-Instruct` | Default model pre-selected in the UI |
+| `image.repository` | `quay.io/rhoai-genaiops/llama-stack-playground` | Container image |
+| `image.tag` | `0.3.0-fix` | Image tag |
+| `route.enabled` | `true` | Creates an OpenShift Route with TLS edge termination |
+
+### Quick deploy
+
+```bash
+# Deploy alongside the llama-stack chart in the same namespace (uses in-cluster service name)
+helm install llama-stack-playground helm/llama-stack-playground/ -n <namespace>
+
+# Point at an external or different namespace llama-stack
+helm install llama-stack-playground helm/llama-stack-playground/ -n <namespace> \
+  --set playground.llamaStackUrl="http://llama-stack.<other-ns>.svc:8321"
+```
+
+### NetworkPolicy
+
+`networkPolicy.enabled` defaults to `false`. An earlier version defaulted to `true` with egress targeting label `app.kubernetes.io/name: llama-stack`, which caused `APIConnectionError` because the llama-stack chart labels pods as `app: llama-stack` — a mismatch that silently blocked all outbound traffic from the playground.
 
 ## Streamlit Playground (`llama-stack-ui/`)
 
