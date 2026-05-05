@@ -37,6 +37,9 @@ All keys live in `st.session_state`. Owner = file that writes the key. Readers =
 | `temperature` | `settings.py` | `chat.py` | Passed through to `chat_completions_stream`. |
 | `top_p` | `settings.py` | `chat.py` | Passed through to `chat_completions_stream`. |
 | `max_tokens` | `settings.py` | `chat.py` | Further capped by `context_length / 2` before use. |
+| `safety_enabled` | `settings.py` | `chat.py` | Gates all shield checks. When false, input/output shield calls are skipped entirely. |
+| `input_shields` | `settings.py` | `chat.py` | List of shield IDs run on user input before sending to LLM. Populated from `/v1/shields` multiselect. |
+| `output_shields` | `settings.py` | `chat.py` | List of shield IDs run on LLM response before displaying. |
 
 ---
 
@@ -70,6 +73,10 @@ If `get_model_context_length()` returns `None` (metadata missing and probe incon
 
 ---
 
+## `get_vector_io_providers_from()` Return Format
+
+Returns `list[{"provider_id": str, "provider_type": str}]` — **full dicts, not strings**. `settings.py` extracts `vio_ids = [p["provider_id"] for p in vector_io_providers]` for the selectbox options. The stale-state guard checks against `vio_ids` (strings), not the raw dict list.
+
 ## Dead Code in `api.py`
 
 The following methods exist but are **not called by any current page**:
@@ -83,8 +90,10 @@ The following methods exist but are **not called by any current page**:
 | `get_response_input_items()` | Not used even before the switch |
 | `delete_response()` | `chat.py` (on conversation delete) |
 | `version()` | Not wired to any UI yet |
-| `get_llm_models_from()` | `settings.py` (endpoint-test flow, verify these) |
-| `get_embedding_models_from()` | `settings.py` (endpoint-test flow, verify these) |
-| `get_vector_io_providers_from()` | `settings.py` (endpoint-test flow, verify these) |
+| `guardrails_chat()` | Not wired — for direct Guardrails Gateway path (bypasses Llama Stack) |
+| `check_external_detector()` / `run_external_detectors()` / `run_regex_filters()` | Not wired — for direct detector calls (bypasses orchestrator) |
 
 The Responses API methods are kept intentionally — see `docs/decisions.md` decision 1.
+
+**Active safety methods** (added in sync with remote, called by `chat.py`):
+`run_shield()`, `get_shields()`, `get_shields_from()`, `register_shield()`, `get_safety_providers()`

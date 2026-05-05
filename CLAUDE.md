@@ -14,19 +14,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Supporting services: Langflow, n8n, PostgreSQL, PostgREST, Swagger UI, Dashy, MinIO.
 
+## Wiki / Persistent Knowledge
+
+The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before working on the UI.** It contains decisions and pitfalls that are not obvious from the code:
+
+- [`llama-stack-ui/docs/decisions.md`](llama-stack-ui/docs/decisions.md) — *why* key architectural choices were made (Chat Completions vs Responses API, client-side history, context probing, etc.)
+- [`llama-stack-ui/docs/entanglements.md`](llama-stack-ui/docs/entanglements.md) — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
+- [`llama-stack-ui/docs/pitfalls.md`](llama-stack-ui/docs/pitfalls.md) — pitfall log with root cause and fix for every non-obvious bug hit so far
+- [`llama-stack-ui/docs/llama-stack-api-improvements.md`](llama-stack-ui/docs/llama-stack-api-improvements.md) — future improvement opportunities across the Llama Stack API
+
+**Wiki rule:** After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `docs/` page before closing.
+
 ## Repository Structure
 
 ```
 ├── helm/
-│   ├── llama-stack/          # Llama Stack chart (guardrails + milvus + RAG)
+│   ├── llama-stack/              # Llama Stack chart (guardrails + milvus + RAG)
+│   ├── guardrails-orchestrator/  # Orchestrator only — detectors NOT included (see below)
 │   ├── anythingllm/
 │   ├── dashy/
+│   ├── docling-serve/
+│   ├── gitea/
 │   ├── langflow/
+│   ├── litemaas/
 │   ├── milvus/
 │   ├── minio/
 │   ├── n8n/
+│   ├── pgadmin/
+│   ├── postgresql/
 │   ├── postgresql-stack/
-│   └── qdrant/
+│   ├── postgrest/
+│   ├── qdrant/
+│   └── swagger-ui/
 ├── llama-stack-ui/           # Streamlit playground app
 │   ├── app.py                # Entry point
 │   ├── pages/
@@ -40,7 +59,11 @@ Supporting services: Langflow, n8n, PostgreSQL, PostgREST, Swagger UI, Dashy, Mi
 │   │   ├── test-env.sh       # Configurable endpoints for tests
 │   │   └── test-guardrails.sh # 18 e2e guardrails test scenarios
 │   ├── config.yaml           # Runtime config (endpoint, model, shields, etc.)
-│   └── docs/                 # API improvement docs
+│   └── docs/                 # Living wiki — READ BEFORE WORKING ON UI
+│       ├── decisions.md      # Architectural decisions with rationale
+│       ├── entanglements.md  # Cross-file dependencies and dead code
+│       ├── pitfalls.md       # Bug log with root causes and fixes
+│       └── llama-stack-api-improvements.md  # Future improvement ideas
 ├── .env                      # OpenShift cluster credentials (NEVER commit secrets)
 └── tests/
     └── test-llamastack.sh    # Llama Stack API tests
@@ -264,6 +287,30 @@ cd llama-stack-ui
 ```
 
 Edit `tests/test-env.sh` to point at different endpoints.
+
+### `helm/guardrails-orchestrator` Chart Gap — Detectors NOT Included
+
+Our `helm/guardrails-orchestrator` chart deploys **only the orchestrator pod**, not the detector services or their models. It assumes the 3 detectors are already running externally (typically in the shared `ai501` namespace on the workshop cluster):
+
+| Detector | Expected at |
+|---|---|
+| `hap` | `guardrails-detector-ibm-hap-predictor.ai501.svc:8000` |
+| `prompt_injection` | `prompt-injection-detector-predictor.ai501.svc:8000` |
+| `language_detection` | `language-detector-predictor.ai501.svc:8000` |
+| `regex` | Built-in sidecar (always deployed by the chart) |
+
+**To install detectors on a fresh cluster**, the rhoai-genaiops `deploy-lab` repo (`guardrails-3.0` branch) has the full stack under `student-content/templates/guardrails/`:
+
+1. **MinIO** — `minio-storage-models.yaml` — deploys a MinIO instance that downloads the 3 HuggingFace models on startup via initContainer (50Gi PVC):
+   - `ibm-granite/granite-guardian-hap-125m`
+   - `protectai/deberta-v3-base-prompt-injection-v2`
+   - `papluca/xlm-roberta-base-language-detection`
+
+2. **Detectors** — each is a KServe `ServingRuntime` + `InferenceService` pair using image `quay.io/trustyai/guardrails-detector-huggingface-runtime:latest`, pulling models from MinIO
+
+3. **Chunker** — `chunker-service.yaml` — gRPC service (`quay.io/rh-ee-mmisiura/chunkers:v2.0`) on port 8085 that the orchestrator uses to split text
+
+These are missing from our Helm repo. Our chart only works where the lab detectors are already running.
 
 ## Critical Knowledge — Pitfalls to Avoid
 
