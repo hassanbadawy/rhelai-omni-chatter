@@ -256,7 +256,7 @@ entries:
     name: guardrails-orchestrator
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/docling-serve-0.1.0/guardrails-orchestrator-0.1.0.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/guardrails-orchestrator-0.1.0/guardrails-orchestrator-0.1.0.tgz
     version: 0.1.0
   langflow:
   - apiVersion: v2
