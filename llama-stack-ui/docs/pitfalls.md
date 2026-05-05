@@ -74,6 +74,90 @@ if "settings_model" in st.session_state and st.session_state["settings_model"] n
 
 ---
 
+## 8. vLLM `api_token: fake` causes `Unauthorized` from Llama Stack
+
+**Symptom:** Chat completions through Llama Stack return `{"detail": "Unauthorized"}` even though the vLLM endpoint is reachable.
+
+**Root cause:** The helm chart default sets `api_token: fake`. On OpenShift, vLLM InferenceServices use OpenShift service account token auth. `fake` is rejected by the predictor's auth middleware.
+
+**Fix:** Set `vllm.apiToken` in the llama-stack helm to the SA token from the InferenceService's service account secret:
+```bash
+oc get secret -n <ns> default-token-<inferenceservice-name>-sa -o jsonpath='{.data.token}' | base64 -d
+```
+Use the token from the **matching** InferenceService SA — not a different service's SA (e.g. whisper SA won't work for qwen predictor).
+
+**How to detect again:** Llama Stack `/v1/models` only shows the embedding model, not the vLLM model. Check `oc logs` on the llama-stack pod for `Unauthorized` when it tries to auto-register models from vLLM on startup.
+
+---
+
+## 9. `shields: null` in Llama Stack config causes `ValidationError` on startup
+
+**Symptom:** New llama-stack pod crashes immediately with `pydantic_core.ValidationError: shields — Input should be a valid list`.
+
+**Root cause:** When `guardrails.enabled=true` but no individual shield flags are set (`hap.enabled`, `regex.enabled`, etc.), the helm template renders `shields:` with nothing after it — YAML null, not an empty list `[]`.
+
+**Fix:** The template uses a `$shieldsEmpty` flag to emit `shields: []` when no shields are enabled. If this regresses, check `helm template` output for `shields:` followed by a blank line.
+
+---
+
+## 10. `confidence_threshold` blank causes `'>' not supported between 'float' and 'NoneType'`
+
+**Symptom:** Shield returns `status: error` with Python comparison error for every message. Clean inputs pass but violated inputs error instead of returning `violation`.
+
+**Root cause:** When shields are enabled via `--set guardrails.hap.enabled=true` without also setting `--set guardrails.hap.confidence_threshold=0.5`, the threshold renders as empty in the config. The `trusty_fms` provider then passes `None` as the threshold to the comparison logic.
+
+**Fix:** Always set confidence thresholds explicitly when enabling shields:
+```bash
+--set guardrails.hap.confidence_threshold=0.5
+--set guardrails.prompt_injection.confidence_threshold=0.5
+--set guardrails.language_detection.confidence_threshold=0.85
+--set guardrails.regex.confidence_threshold=0.5
+```
+
+---
+
+## 11. Guardrails detector runtime expects `MODEL_DIR`, not `DETECTOR_MODEL_ID`
+
+**Symptom:** Detector pods crash with `ValueError: MODEL_DIR environment variable is not set`.
+
+**Root cause:** `quay.io/trustyai/guardrails-detector-huggingface-runtime` does **not** pull models from HuggingFace at startup. It calls `AutoTokenizer.from_pretrained(model_files_path)` where `model_files_path = os.environ.get("MODEL_DIR")` — a local filesystem path. The model must already be on disk.
+
+**Fix:** Use an initContainer with the same runtime image to call `snapshot_download()` into an `emptyDir` volume mounted at `/mnt/models`, then set `MODEL_DIR=/mnt/models` on the main container. The initContainer needs 4Gi memory limit (language-detection OOMs at 2Gi).
+
+**How to detect again:** Pod is in `Init:Error` or `Init:CrashLoopBackOff`. Check initContainer logs for the `MODEL_DIR` error or OOMKilled.
+
+---
+
+## 12. `chunker.hostname` set to a non-service value breaks orchestrator startup
+
+**Symptom:** Guardrails orchestrator crashes with `invalid config file: chunkers.sentence: missing field 'service'`.
+
+**Root cause:** The chunker config block requires a valid `service:` sub-block with `hostname` and `port`. Leaving it blank (or setting it to a namespace name like `agentic-ivr`) renders malformed YAML that the orchestrator rejects.
+
+**Fix:** The configmap template always renders a fallback `service: hostname: 127.0.0.1, port: 8085` when `chunker.hostname` is empty. Leave `chunker.hostname: ""` unless you have an actual chunker service deployed.
+
+---
+
+## 13. Wrong SA token used for vLLM auth
+
+**Symptom:** Llama Stack returns `{"detail": "Forbidden (user=system:serviceaccount:<ns>:<wrong-sa>)"}` — authenticates but gets RBAC denied.
+
+**Root cause:** The wrong service account token was set in the helm upgrade. Each InferenceService has its own SA (e.g. `redhataiqwen3-8b-fp8-dynamic-sa`). Using the whisper SA token to call the qwen predictor authenticates as the whisper SA, which has no permission on the qwen InferenceService.
+
+**Fix:** Match the SA name to the InferenceService name: `default-token-<inferenceservice-name>-sa`.
+
+---
+
+## 14. `remote::passthrough` is incompatible with IBM/FMS guardrails detectors
+
+**Symptom:** Attempting to use `remote::passthrough` as the Llama Stack safety provider against the FMS guardrails orchestrator fails — no violations are ever detected.
+
+**Root cause:** `remote::passthrough` calls `POST /moderations` (OpenAI format). FMS orchestrator exposes `POST /api/v2/text/detection/content` (IBM format). Completely different request/response schemas.
+
+**Fix:** Use `remote::trusty_fms` (only available in the custom `quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms` image). Requires `guardrails.enabled=true` in the llama-stack helm chart.
+
+---
+
 ## 7. `embedding_dimension` mismatch on vector store creation
 
 **Symptom:** Vector store creation fails or embeddings don't match when searching.

@@ -31,7 +31,7 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 ├── helm/
 │   ├── llama-stack/              # Llama Stack chart (guardrails + milvus + RAG)
 │   ├── llama-stack-playground/   # Streamlit playground UI chart (standalone, points at any Llama Stack)
-│   ├── guardrails-orchestrator/  # Orchestrator only — detectors NOT included (see below)
+│   ├── guardrails-orchestrator/  # Orchestrator + bundled HF detectors (v0.2.0+, self-contained)
 │   ├── anythingllm/
 │   ├── dashy/
 │   ├── docling-serve/
@@ -318,29 +318,51 @@ cd llama-stack-ui
 
 Edit `tests/test-env.sh` to point at different endpoints.
 
-### `helm/guardrails-orchestrator` Chart Gap — Detectors NOT Included
+### `helm/guardrails-orchestrator` — Self-Contained Detector Deployments (v0.2.0+)
 
-Our `helm/guardrails-orchestrator` chart deploys **only the orchestrator pod**, not the detector services or their models. It assumes the 3 detectors are already running externally (typically in the shared `ai501` namespace on the workshop cluster):
+As of chart v0.2.0, detectors are **bundled in the chart** — no external namespace (`ai501`) or KServe dependency required. Each detector entry with `type: huggingface` automatically deploys a `Deployment` + `Service` in the same namespace.
 
-| Detector | Expected at |
-|---|---|
-| `hap` | `guardrails-detector-ibm-hap-predictor.ai501.svc:8000` |
-| `prompt_injection` | `prompt-injection-detector-predictor.ai501.svc:8000` |
-| `language_detection` | `language-detector-predictor.ai501.svc:8000` |
-| `regex` | Built-in sidecar (always deployed by the chart) |
+#### How it works
 
-**To install detectors on a fresh cluster**, the rhoai-genaiops `deploy-lab` repo (`guardrails-3.0` branch) has the full stack under `student-content/templates/guardrails/`:
+An `initContainer` (using the same runtime image) downloads the HuggingFace model via `snapshot_download()` into an `emptyDir` volume at `/mnt/models`. The main container then loads from `MODEL_DIR=/mnt/models`.
 
-1. **MinIO** — `minio-storage-models.yaml` — deploys a MinIO instance that downloads the 3 HuggingFace models on startup via initContainer (50Gi PVC):
-   - `ibm-granite/granite-guardian-hap-125m`
-   - `protectai/deberta-v3-base-prompt-injection-v2`
-   - `papluca/xlm-roberta-base-language-detection`
+#### Detector models
 
-2. **Detectors** — each is a KServe `ServingRuntime` + `InferenceService` pair using image `quay.io/trustyai/guardrails-detector-huggingface-runtime:latest`, pulling models from MinIO
+| Detector key | HuggingFace model | Memory (init) |
+|---|---|---|
+| `hap` | `ibm-granite/granite-guardian-hap-125m` | 2Gi |
+| `prompt_injection` | `protectai/deberta-v3-base-prompt-injection-v2` | 2Gi |
+| `language_detection` | `papluca/xlm-roberta-base-language-detection` | 4Gi |
+| `regex_competitor` | Built-in sidecar (no model) | — |
 
-3. **Chunker** — `chunker-service.yaml` — gRPC service (`quay.io/rh-ee-mmisiura/chunkers:v2.0`) on port 8085 that the orchestrator uses to split text
+#### Adding a new detector
 
-These are missing from our Helm repo. Our chart only works where the lab detectors are already running.
+Add an entry to `detectors:` in `values.yaml` — no template changes needed:
+
+```yaml
+detectors:
+  my_detector:
+    enabled: true
+    type: huggingface
+    modelId: "org/model-name"    # HuggingFace model ID
+    hfToken: "hf_xxx"            # optional — only for gated/private models
+    hostname: "my-detector"      # must use dashes, no underscores
+    port: 8000
+    threshold: 0.5
+    input: true
+    output: true
+    params: {}
+```
+
+For gated models, set `detectorDefaults.hfToken` (global) or `hfToken` per-detector. Token is stored in a `guardrails-hf-token` Secret.
+
+#### Critical: `chunker.hostname` must be empty or a real service
+
+Leave `chunker.hostname: ""` unless you have a separate chunker service. Setting it to anything (e.g. a namespace name) causes the orchestrator to fail with `missing field 'service'` on startup. The chart defaults to `127.0.0.1:8085` (loopback) when hostname is empty, which satisfies the config schema even though no chunker is running.
+
+#### Critical: `confidence_threshold` must be set explicitly
+
+When enabling shields via `--set guardrails.hap.enabled=true`, always also set the threshold. A blank threshold renders as YAML null, causing `'>' not supported between 'float' and 'NoneType'` in the provider. Default values: `hap=0.5`, `prompt_injection=0.5`, `language_detection=0.85`, `regex=0.5`.
 
 ## Critical Knowledge — Pitfalls to Avoid
 
