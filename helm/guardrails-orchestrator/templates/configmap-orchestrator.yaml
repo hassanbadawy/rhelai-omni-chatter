@@ -13,8 +13,12 @@ data:
         type: sentence
         {{- if .Values.chunker.hostname }}
         service:
-            hostname: {{ .Values.chunker.hostname }}
-            port: {{ .Values.chunker.port }}
+          hostname: {{ .Values.chunker.hostname }}
+          port: {{ .Values.chunker.port }}
+        {{- else }}
+        service:
+          hostname: "127.0.0.1"
+          port: 8085
         {{- end }}
     {{- if .Values.openai.hostname }}
     openai:

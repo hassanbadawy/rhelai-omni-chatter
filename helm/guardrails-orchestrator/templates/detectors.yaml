@@ -1,6 +1,7 @@
 {{- range $name, $detector := .Values.detectors }}
 {{- if and $detector.enabled (eq $detector.type "huggingface") }}
 {{- $svcName := printf "%s-detector" ($name | replace "_" "-") }}
+{{- $modelDir := "/mnt/models" }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -24,15 +25,23 @@ spec:
         app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/part-of: trustyai
     spec:
-      containers:
-        - name: {{ $svcName }}
-          image: {{ $detector.image | default $.Values.detectorDefaults.image }}
-          imagePullPolicy: IfNotPresent
+      initContainers:
+        - name: download-model
+          image: "quay.io/trustyai/guardrails-detector-huggingface-runtime:latest"
+          command:
+            - sh
+            - -c
+            - |
+              python3 -c "
+              import os
+              from huggingface_hub import snapshot_download
+              token = os.environ.get('HF_TOKEN')
+              snapshot_download('{{ $detector.modelId }}', local_dir='{{ $modelDir }}', token=token or None)
+              print('Download complete')
+              "
           env:
-            - name: DETECTOR_MODEL_ID
-              value: {{ $detector.modelId | quote }}
-            - name: PORT
-              value: "8000"
+            - name: HF_HOME
+              value: /tmp/hf_home
             {{- if or $detector.hfToken $.Values.detectorDefaults.hfToken }}
             - name: HF_TOKEN
               valueFrom:
@@ -40,6 +49,33 @@ spec:
                   name: guardrails-hf-token
                   key: token
             {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+          volumeMounts:
+            - name: model-storage
+              mountPath: /mnt/models
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 2Gi
+            limits:
+              cpu: "1"
+              memory: 4Gi
+      containers:
+        - name: {{ $svcName }}
+          image: {{ $detector.image | default $.Values.detectorDefaults.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MODEL_DIR
+              value: {{ $modelDir | quote }}
+            - name: HF_HOME
+              value: /tmp/hf_home
+            - name: PORT
+              value: "8000"
           ports:
             - containerPort: 8000
               name: http
@@ -56,16 +92,22 @@ spec:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 90
+            initialDelaySeconds: 60
             periodSeconds: 15
             failureThreshold: 5
+          volumeMounts:
+            - name: model-storage
+              mountPath: /mnt/models
+      volumes:
+        - name: model-storage
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
