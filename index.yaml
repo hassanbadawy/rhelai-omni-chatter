@@ -239,6 +239,27 @@ entries:
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-05-06T01:39:59.326004+03:00"
+    description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
+      prompt injection, language detection, regex, custom detectors)
+    digest: 146da66d3d26eb019f1edb5cad3b2fb3e4a89bd34f318711b06f962656c87114
+    icon: https://avatars.githubusercontent.com/u/151674099
+    keywords:
+    - guardrails
+    - safety
+    - content-moderation
+    - openshift
+    - rhoai
+    - trustyai
+    maintainers:
+    - name: hasanbadawy
+    name: guardrails-orchestrator
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/guardrails-orchestrator-0.2.0/guardrails-orchestrator-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-03-25T00:50:46.60087+03:00"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
@@ -696,4 +717,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-05T22:37:26.35899696Z"
+generated: "2026-05-06T01:39:59.325323+03:00"
