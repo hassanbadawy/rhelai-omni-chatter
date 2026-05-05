@@ -11,9 +11,11 @@ data:
     chunkers:
       sentence:
         type: sentence
+        {{- if .Values.chunker.hostname }}
         service:
             hostname: {{ .Values.chunker.hostname }}
             port: {{ .Values.chunker.port }}
+        {{- end }}
     {{- if .Values.openai.hostname }}
     openai:
         service:

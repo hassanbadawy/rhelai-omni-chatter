@@ -37,8 +37,10 @@ route:
   enabled: false
 
 # -- Chunker service (for text chunking before detection)
+# The orchestrator uses whole_doc_chunker by default — no external chunker needed for content detection.
+# Set hostname only if you have a separate chunker service deployed.
 chunker:
-  hostname: "chunker-service.ai501.svc.cluster.local"
+  hostname: ""
   port: 8085
 
 # -- OpenAI-compatible LLM endpoint (used by gateway for passthrough)
@@ -46,21 +48,51 @@ openai:
   hostname: ""
   port: 8080
 
+# -- Default settings applied to all huggingface-type detectors
+detectorDefaults:
+  image: "quay.io/trustyai/guardrails-detector-huggingface-runtime:latest"
+  # -- HuggingFace token for gated models (stored as a Secret, not in plain env vars).
+  # Set this globally here, or per-detector via hfToken field.
+  # If a per-detector hfToken is set, it takes precedence over this global value.
+  # Leave empty for public models (no token needed).
+  hfToken: ""
+  resources:
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
 # -- Detectors configuration
 # Each detector entry generates:
 #   1. An entry in the orchestrator ConfigMap (hostname, port, threshold)
 #   2. An entry in the gateway ConfigMap (input/output, params)
 #   3. Inclusion in the "all" route
 #
-# To add a new detector, just add a new entry here.
-# The detector must expose: POST /api/v1/text/contents
-#   Request:  {"contents": ["text"], "detector_params": {"threshold": 0.5}}
-#   Response: [[{"detection_type": "...", "score": 0.99, ...}]]
+# type: builtin     — regex sidecar in the orchestrator pod (127.0.0.1), no model needed
+# type: huggingface — deploys a Deployment+Service in this namespace, pulls model from HuggingFace
+#                     Required fields: modelId (HuggingFace model ID, e.g. "org/model-name")
+#                     Optional fields: hfToken (per-detector token override), image, resources
+# type: remote      — points at an already-running external detector service
+#                     Required fields: hostname, port
+#
+# To add a new detector:
+#   my_detector:
+#     enabled: true
+#     type: huggingface
+#     modelId: "org/my-model-name"   # HuggingFace model ID
+#     hfToken: "hf_xxx"              # optional — only needed for gated/private models
+#     hostname: "my-detector"        # must be a valid DNS label (no underscores)
+#     port: 8000
+#     threshold: 0.5
+#     input: true
+#     output: true
+#     params: {}
 #
 detectors:
   regex_competitor:
     enabled: true
-    # -- "builtin" means the regex sidecar container (127.0.0.1)
     type: builtin
     threshold: 0.5
     input: true
@@ -71,8 +103,9 @@ detectors:
 
   hap:
     enabled: true
-    type: remote
-    hostname: "guardrails-detector-ibm-hap-predictor.ai501.svc.cluster.local"
+    type: huggingface
+    modelId: "ibm-granite/granite-guardian-hap-125m"
+    hostname: "hap-detector"
     port: 8000
     threshold: 0.5
     input: true
@@ -81,8 +114,9 @@ detectors:
 
   prompt_injection:
     enabled: true
-    type: remote
-    hostname: "prompt-injection-detector-predictor.ai501.svc.cluster.local"
+    type: huggingface
+    modelId: "protectai/deberta-v3-base-prompt-injection-v2"
+    hostname: "prompt-injection-detector"
     port: 8000
     threshold: 0.5
     input: true
@@ -91,8 +125,9 @@ detectors:
 
   language_detection:
     enabled: true
-    type: remote
-    hostname: "language-detector-predictor.ai501.svc.cluster.local"
+    type: huggingface
+    modelId: "papluca/xlm-roberta-base-language-detection"
+    hostname: "language-detection-detector"
     port: 8000
     threshold: 0.5
     input: true
