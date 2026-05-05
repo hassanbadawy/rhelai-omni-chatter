@@ -1,9 +1,12 @@
 import json
+import logging
 import re
 
 import requests
 
 from modules.config import load_config
+
+logger = logging.getLogger(__name__)
 
 
 class LlamaStackClient:
@@ -14,14 +17,13 @@ class LlamaStackClient:
 
     def get_models(self, model_type=None):
         """Fetch available models from /v1/models.
-        Handles both Llama Stack format (identifier/model_type)
+        Handles both Llama Stack format (identifier/model_type/custom_metadata)
         and OpenAI format (id).
         """
         resp = requests.get(f"{self.base_url}/v1/models", timeout=10)
         resp.raise_for_status()
         models = resp.json().get("data", [])
 
-        # Normalize to a common format
         result = []
         for m in models:
             model_id = m.get("identifier") or m.get("id", "")
@@ -42,6 +44,52 @@ class LlamaStackClient:
         """Fetch only LLM models (not embedding models)."""
         return self.get_models(model_type="llm")
 
+    def get_model_context_length(self, model_id):
+        """Get the max context length for a model.
+        Tries model metadata first, then probes with a minimal request."""
+        # 1) Check model metadata
+        try:
+            models = self.get_models()
+            for m in models:
+                if m["id"] == model_id:
+                    metadata = m.get("metadata", {})
+                    raw = m.get("raw", {})
+                    for key in ["max_seq_len", "context_length", "max_context_length",
+                                "max_model_len", "context_window"]:
+                        val = metadata.get(key) or raw.get(key)
+                        if val:
+                            logger.info("Model %s context length: %s (from metadata.%s)", model_id, val, key)
+                            return int(val)
+                    logger.info("Model %s metadata keys: %s", model_id, list(metadata.keys()))
+        except Exception as e:
+            logger.warning("Failed to fetch model metadata for %s: %s", model_id, e)
+
+        # 2) Probe: send an intentionally large max_tokens to trigger an error
+        #    that reveals the actual context length
+        try:
+            resp = requests.post(
+                f"{self.base_url}/v1/chat/completions",
+                json={
+                    "model": model_id,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 999999,
+                    "stream": False,
+                },
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                return None
+            body = resp.text
+            match = re.search(r"maximum context length is (\d+) tokens", body)
+            if match:
+                ctx = int(match.group(1))
+                logger.info("Model %s context length: %d (from probe)", model_id, ctx)
+                return ctx
+        except Exception as e:
+            logger.warning("Context length probe failed for %s: %s", model_id, e)
+
+        return None
+
     def chat_completions(self, messages, model, **kwargs):
         """Non-streaming chat completion"""
         payload = {"messages": messages, "model": model, "stream": False, **kwargs}
@@ -56,30 +104,47 @@ class LlamaStackClient:
     def chat_completions_stream(self, messages, model, **kwargs):
         """Streaming chat completion - yields content chunks"""
         payload = {"messages": messages, "model": model, "stream": True, **kwargs}
+        logger.info("Chat completions stream to %s/v1/chat/completions", self.base_url)
+        logger.debug("Payload: %s", json.dumps(payload, default=str))
         with requests.post(
             f"{self.base_url}/v1/chat/completions",
             json=payload,
             stream=True,
             timeout=120,
         ) as resp:
+            logger.info("Chat completions stream status: %d", resp.status_code)
             resp.raise_for_status()
+            line_count = 0
             for line in resp.iter_lines():
                 if not line:
                     continue
                 line = line.decode("utf-8")
+                line_count += 1
+                if line_count <= 5:
+                    logger.info("SSE line %d: %s", line_count, line[:200])
                 if not line.startswith("data: "):
                     continue
                 data = line[6:]
                 if data.strip() == "[DONE]":
+                    logger.info("Stream finished ([DONE]) after %d lines", line_count)
                     break
                 try:
                     chunk = json.loads(data)
+                    if "error" in chunk:
+                        error_msg = chunk["error"].get("message", str(chunk["error"]))
+                        logger.error("Server error in stream: %s", error_msg)
+                        raise RuntimeError(error_msg)
                     delta = chunk["choices"][0].get("delta", {})
                     content = delta.get("content", "")
                     if content:
                         yield content
-                except (json.JSONDecodeError, KeyError, IndexError):
+                except (KeyError, IndexError) as e:
+                    logger.warning("Failed to parse chunk: %s — raw: %s", e, data[:200])
                     continue
+                except json.JSONDecodeError as e:
+                    logger.warning("Invalid JSON in stream: %s — raw: %s", e, data[:200])
+                    continue
+            logger.info("Stream ended, total lines: %d", line_count)
 
     def health(self, base_url=None):
         """Check server health - tries /v1/health then /health"""
@@ -154,7 +219,9 @@ class LlamaStackClient:
         return result
 
     def get_vector_io_providers_from(self, base_url):
-        """Fetch vector_io providers from a specific endpoint URL."""
+        """Fetch vector_io providers from a specific endpoint URL.
+        Returns list of {"provider_id": str, "provider_type": str}.
+        """
         resp = requests.get(f"{base_url}/v1/providers", timeout=10)
         resp.raise_for_status()
         providers = resp.json().get("data", resp.json() if isinstance(resp.json(), list) else [])
@@ -254,11 +321,7 @@ class LlamaStackClient:
     # --- Guardrails Orchestrator Gateway ---
 
     def guardrails_chat(self, gateway_url, route, messages, model, **kwargs):
-        """Send chat through the Guardrails Orchestrator Gateway.
-        The gateway runs detectors and returns detections/warnings alongside the response.
-        Returns the full response dict including 'choices', 'detections', 'warnings'.
-        """
-        # The gateway model name is the raw vLLM model (without provider prefix)
+        """Send chat through the Guardrails Orchestrator Gateway."""
         gw_model = model.split("/")[-1] if "/" in model else model
         payload = {"messages": messages, "model": gw_model, "stream": False, **kwargs}
         resp = requests.post(
@@ -287,7 +350,6 @@ class LlamaStackClient:
             )
             resp.raise_for_status()
             result = resp.json()
-            # Response is [[...detections...]] — return inner list
             if result and isinstance(result, list) and isinstance(result[0], list):
                 return result[0]
             return []
@@ -367,9 +429,7 @@ class LlamaStackClient:
             return []
 
     def register_shield(self, shield_id, provider_shield_id, provider_id=None, config=None):
-        """Register a safety shield on the server.
-        POST /v1/shields
-        """
+        """Register a safety shield on the server."""
         payload = {
             "shield_id": shield_id,
             "provider_shield_id": provider_shield_id,
@@ -414,9 +474,7 @@ class LlamaStackClient:
             timeout=30,
         )
         resp.raise_for_status()
-        result = resp.json()
-        violation = result.get("violation")
-        return violation
+        return resp.json().get("violation")
 
     # --- Responses API (server-side chat history) ---
 
@@ -489,25 +547,32 @@ class LlamaStackClient:
 
     def _create_response_stream(self, payload):
         """Stream a response, yielding content text chunks."""
+        logger.info("Streaming request to %s/v1/responses", self.base_url)
+        logger.debug("Payload: %s", json.dumps(payload, default=str))
         with requests.post(
             f"{self.base_url}/v1/responses",
             json=payload,
             stream=True,
             timeout=120,
         ) as resp:
+            logger.info("Stream response status: %d", resp.status_code)
             resp.raise_for_status()
             for line in resp.iter_lines():
                 if not line:
                     continue
                 line = line.decode("utf-8")
+                logger.debug("SSE raw line: %s", line[:200])
                 if not line.startswith("data: "):
+                    logger.info("Non-data SSE line: %s", line[:200])
                     continue
                 data = line[6:]
                 if data.strip() == "[DONE]":
+                    logger.info("Stream finished ([DONE])")
                     break
                 try:
                     event = json.loads(data)
                     etype = event.get("type", "")
+                    logger.info("SSE event type: %s", etype)
                     if etype == "response.output_text.delta":
                         delta = event.get("delta", "")
                         if delta:
@@ -515,7 +580,15 @@ class LlamaStackClient:
                     elif etype == "response.completed":
                         completed = event.get("response", {})
                         yield {"type": "completed", "response": completed}
-                except (json.JSONDecodeError, KeyError):
+                    elif etype == "response.failed":
+                        error = event.get("response", {}).get("error", {})
+                        msg = error.get("message", "Unknown error")
+                        logger.error("Server returned response.failed: %s", msg)
+                        yield {"type": "error", "message": msg}
+                    else:
+                        logger.info("Unhandled SSE event: %s", json.dumps(event, default=str)[:300])
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning("Failed to parse SSE data: %s — raw: %s", e, data[:200])
                     continue
 
     def delete_response(self, response_id):
@@ -526,7 +599,6 @@ class LlamaStackClient:
         )
         resp.raise_for_status()
         return resp.json()
-
 
 
 client = LlamaStackClient()

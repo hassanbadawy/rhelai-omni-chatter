@@ -68,8 +68,10 @@ def settings_page():
 
     saved_model = config.get("model", "")
     if model_ids:
+        if "settings_model" in st.session_state and st.session_state["settings_model"] not in model_ids:
+            del st.session_state["settings_model"]
         default_index = model_ids.index(saved_model) if saved_model in model_ids else 0
-        selected_model = st.selectbox("Model", model_ids, index=default_index)
+        selected_model = st.selectbox("Model", model_ids, index=default_index, key="settings_model")
     else:
         st.warning("No LLM models found at this endpoint.")
         selected_model = ""
@@ -88,12 +90,15 @@ def settings_page():
     if embedding_models:
         emb_ids = [m["id"] for m in embedding_models]
         emb_labels = [f"{m['id']} (dim: {m['dimension']})" for m in embedding_models]
+        if "settings_embedding" in st.session_state and st.session_state["settings_embedding"] not in emb_ids:
+            del st.session_state["settings_embedding"]
         emb_index = emb_ids.index(saved_embedding) if saved_embedding in emb_ids else 0
         selected_embedding = st.selectbox(
             "Embedding Model",
             options=emb_ids,
             format_func=lambda x: emb_labels[emb_ids.index(x)],
             index=emb_index,
+            key="settings_embedding",
         )
         embedding_dimension = embedding_models[emb_ids.index(selected_embedding)]["dimension"]
     else:
@@ -112,12 +117,15 @@ def settings_page():
     if vector_io_providers:
         vio_ids = [p["provider_id"] for p in vector_io_providers]
         vio_labels = [f"{p['provider_id']} ({p['provider_type']})" for p in vector_io_providers]
+        if "settings_vio" in st.session_state and st.session_state["settings_vio"] not in vio_ids:
+            del st.session_state["settings_vio"]
         vio_index = vio_ids.index(saved_vio) if saved_vio in vio_ids else 0
         selected_vio = st.selectbox(
             "Vector IO Provider",
             options=vio_ids,
             format_func=lambda x: vio_labels[vio_ids.index(x)],
             index=vio_index,
+            key="settings_vio",
         )
     else:
         selected_vio = saved_vio
@@ -139,8 +147,6 @@ def settings_page():
         st.caption("Shields are managed server-side by Llama Stack. "
                    "Select which shields to run on input and output messages.")
 
-        # Fetch shields from Llama Stack
-        shields = []
         try:
             shields = client.get_shields_from(url)
         except Exception:

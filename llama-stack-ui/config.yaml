@@ -1,14 +1,14 @@
 endpoint: https://llama-stack-user1-canopy.apps.ocp.9xgvv.sandbox3434.opentlc.com
 user_id: hbadawy
-model: vllm/llama32
+model: vllm/qwen25-vl-7b-instruct
 embedding_model: granite-embedding-125m
 embedding_dimension: 768
 vector_io_provider: milvus
-safety_enabled: true
+safety_enabled: false
 input_shields: []
 output_shields: []
 language: English
-system_prompt: you are a helpful assistant, speak english only
+system_prompt: You are a helpful assistant
 temperature: 0.1
 top_p: 0.9
-max_tokens: 1024
+max_tokens: 2000

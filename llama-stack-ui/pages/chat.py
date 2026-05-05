@@ -1,3 +1,5 @@
+import logging
+
 import streamlit as st
 
 from modules.api import client
@@ -7,6 +9,9 @@ from modules.config import (
     set_user_chat_name,
     remove_user_chat_name,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
 SUMMARY_PROMPT = """Analyze the following documents and extract a structured summary.
 Respond ONLY in {language}. Use this exact format (no extra text):
@@ -36,66 +41,20 @@ DOCUMENTS:
 {context}"""
 
 
-def _extract_text(content):
-    """Extract plain text from a response content field (string or list of parts)."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts = []
-        for p in content:
-            if isinstance(p, dict):
-                parts.append(p.get("text", ""))
-            elif isinstance(p, str):
-                parts.append(p)
-        return "".join(parts)
-    return str(content)
+def _get_conversations():
+    """Get the conversations dict from session state."""
+    if "conversations" not in st.session_state:
+        st.session_state.conversations = {}
+    return st.session_state.conversations
 
 
-def _build_chains_from_responses(responses):
-    """Group responses into conversation chains using previous_response_id.
-    Returns {chain_key: chain} where chain_key is the first response ID."""
-    by_id = {r["id"]: r for r in responses}
-    children = {}
-    for r in responses:
-        prev = r.get("previous_response_id")
-        if prev:
-            children[prev] = r["id"]
-
-    chain_tails = [r["id"] for r in responses if r["id"] not in children]
-
-    chains_by_key = {}
-    for tail_id in chain_tails:
-        chain = [tail_id]
-        current = by_id.get(tail_id)
-        while current and current.get("previous_response_id"):
-            prev_id = current["previous_response_id"]
-            if prev_id in by_id:
-                chain.append(prev_id)
-                current = by_id[prev_id]
-            else:
-                break
-        chain.reverse()
-        chain_key = chain[0]  # first response ID
-        chains_by_key[chain_key] = chain
-
-    return chains_by_key, by_id
-
-
-def _load_chain_messages(chain, by_id):
-    """Build the message list for a conversation chain from response data."""
-    messages = []
-    for resp_id in chain:
-        resp = by_id.get(resp_id, {})
-        inp = resp.get("input", "")
-        user_text = _extract_text(inp)
-        if user_text:
-            messages.append({"role": "user", "content": user_text})
-        for out in resp.get("output", []):
-            if out.get("type") == "message" and out.get("role") == "assistant":
-                text = _extract_text(out.get("content", ""))
-                if text:
-                    messages.append({"role": "assistant", "content": text})
-    return messages
+def _get_active_messages():
+    """Get the message list for the active conversation."""
+    convs = _get_conversations()
+    active = st.session_state.get("active_chat_key")
+    if active and active in convs:
+        return convs[active]
+    return []
 
 
 def chat_page():
@@ -104,6 +63,7 @@ def chat_page():
     config = load_config()
     endpoint = config.get("endpoint", "")
     user_id = config.get("user_id", "")
+    logger.info("Config loaded — endpoint=%s, user_id=%s, model=%s", endpoint, user_id, config.get("model", ""))
 
     if not endpoint:
         st.error("No endpoint configured. Please go to **Settings** to configure the endpoint.")
@@ -114,6 +74,7 @@ def chat_page():
         return
 
     if not client.health():
+        logger.warning("Health check failed for endpoint %s", endpoint)
         st.error("Unable to reach the Llama Stack server. Please go to **Settings** to configure the endpoint.")
         return
 
@@ -124,33 +85,36 @@ def chat_page():
     temperature = config.get("temperature", 0.7)
     top_p = config.get("top_p", 0.9)
     max_tokens = config.get("max_tokens", 1024)
+    logger.info("Settings — model=%s, language=%s, temperature=%s, top_p=%s, max_tokens=%s",
+                selected_model, language, temperature, top_p, max_tokens)
 
     if not selected_model:
         try:
             models = client.get_llm_models()
+            logger.info("No model configured, fetched %d models from server", len(models))
             if models:
                 selected_model = models[0]["id"]
-        except Exception:
-            pass
+                logger.info("Auto-selected model: %s", selected_model)
+        except Exception as e:
+            logger.error("Failed to fetch models for auto-select: %s", e)
 
     if not selected_model:
         st.warning("No model configured. Go to Settings to set endpoint and model.")
         return
 
-    # --- Load responses from server and build chains ---
-    try:
-        all_responses = client.list_responses(limit=100)
-    except Exception as e:
-        st.error(f"Failed to load chat history: {e}")
-        return
+    # Query server for model context length (cached in session state)
+    ctx_cache_key = f"_ctx_len_{selected_model}"
+    if ctx_cache_key not in st.session_state:
+        st.session_state[ctx_cache_key] = client.get_model_context_length(selected_model)
+    context_length = st.session_state[ctx_cache_key]
+    if context_length:
+        logger.info("Model context length: %d", context_length)
 
-    chains_by_key, by_id = _build_chains_from_responses(all_responses)
-
-    # --- conversations.json is the source of truth for the dropdown ---
+    convs = _get_conversations()
     chat_names = get_user_chat_names(user_id)
 
-    # Filter: only show conversations that exist both in conversations.json AND on the server
-    valid_keys = [k for k in chat_names if k in chains_by_key]
+    # Valid conversations: exist in both session state and conversations.json
+    valid_keys = [k for k in chat_names if k in convs]
 
     # --- Sidebar ---
     with st.sidebar:
@@ -167,7 +131,7 @@ def chat_page():
             st.session_state.pop("confirm_delete_conv", None)
             st.rerun()
 
-        # Conversation dropdown — always visible, "New Chat" + registered conversations
+        # Conversation dropdown
         all_options = [None] + valid_keys
         all_labels = {None: "New Chat"}
         for k in valid_keys:
@@ -219,7 +183,6 @@ def chat_page():
                         st.session_state.pop("show_rename", None)
                         st.rerun()
                     elif new_name.strip() and selected_key is None:
-                        # Renaming the "New Chat" — store the pending name for when first message is sent
                         st.session_state.pending_chat_name = new_name.strip()
                         st.session_state.pop("show_rename", None)
                         st.rerun()
@@ -234,12 +197,7 @@ def chat_page():
             d_col1, d_col2 = st.columns(2)
             with d_col1:
                 if st.button("Yes, delete", key="conv_del_yes"):
-                    chain = chains_by_key.get(selected_key, [])
-                    for resp_id in chain:
-                        try:
-                            client.delete_response(resp_id)
-                        except Exception:
-                            pass
+                    convs.pop(selected_key, None)
                     remove_user_chat_name(user_id, selected_key)
                     st.session_state.confirm_delete_conv = False
                     st.session_state.active_chat_key = None
@@ -299,13 +257,12 @@ def chat_page():
 
     # --- Determine active conversation state ---
     active_key = st.session_state.get("active_chat_key")
-    messages = []
-    last_response_id = None
+    messages = _get_active_messages()
 
-    if active_key and active_key in chains_by_key:
-        chain = chains_by_key[active_key]
-        messages = _load_chain_messages(chain, by_id)
-        last_response_id = chain[-1]
+    if active_key:
+        logger.info("Active conversation: key=%s, messages=%d", active_key, len(messages))
+    else:
+        logger.info("No active conversation (new chat)")
 
     # --- Display chat history ---
     for msg in messages:
@@ -314,19 +271,36 @@ def chat_page():
 
     # --- Process prompt ---
     def process_prompt(prompt):
-        nonlocal last_response_id
+        logger.info("Processing prompt: %s", prompt[:100])
 
         input_text = prompt
         retrieval_output = ""
 
         if selected_vector_db:
+            logger.info("RAG enabled — searching vector store %s", selected_vector_db)
             try:
                 chunks = client.search_vector_store(selected_vector_db, prompt, max_num_results=5)
                 retrieval_output = "\n\n".join(chunks)
+                logger.info("RAG retrieved %d chunks (%d chars)", len(chunks), len(retrieval_output))
             except Exception as e:
+                logger.error("RAG search failed: %s", e)
                 st.warning(f"Search failed: {e}")
 
             if retrieval_output:
+                # Truncate RAG context to fit within model context budget
+                # Reserve tokens for: system prompt, conversation history, user query, and output
+                if context_length:
+                    overhead = len(prompt) + len(system_prompt) + 200  # query + system + framing
+                    history_chars = sum(len(m["content"]) for m in messages)
+                    # ~3 chars per token (conservative) — leave room for output
+                    max_context_chars = (context_length * 3) // 2 - overhead - history_chars
+                    if max_context_chars < 100:
+                        max_context_chars = 100
+                    if len(retrieval_output) > max_context_chars:
+                        logger.info("Truncating RAG context from %d to %d chars (model context=%d)",
+                                    len(retrieval_output), max_context_chars, context_length)
+                        retrieval_output = retrieval_output[:max_context_chars]
+
                 input_text = (
                     f"Please answer the following query using the context below.\n\n"
                     f"CONTEXT:\n{retrieval_output}\n\n"
@@ -367,29 +341,53 @@ def chat_page():
 
             message_placeholder = st.empty()
             full_response = ""
-            new_response_id = None
 
+            # Build the API message list: system prompt + conversation history + new user message
+            api_messages = []
+            if system_prompt.strip():
+                api_messages.append({"role": "system", "content": system_prompt.strip()})
+            api_messages.extend(messages)
+            api_messages.append({"role": "user", "content": input_text})
+
+            # Cap max_tokens to fit within model context length
+            effective_max_tokens = max_tokens
+            if context_length:
+                effective_max_tokens = min(max_tokens, context_length // 2)
+                # Estimate input tokens (~3 chars/token, conservative) and trim oldest messages to fit
+                max_input_tokens = context_length - effective_max_tokens
+                while len(api_messages) > 2:  # keep at least system + current user message
+                    total_chars = sum(len(m["content"]) for m in api_messages)
+                    estimated_tokens = (total_chars // 3) + (len(api_messages) * 4)
+                    if estimated_tokens <= max_input_tokens:
+                        break
+                    # Remove the oldest non-system message
+                    start = 1 if api_messages[0]["role"] == "system" else 0
+                    removed = api_messages.pop(start)
+                    logger.info("Trimmed message (role=%s, len=%d) to fit context", removed["role"], len(removed["content"]))
+                logger.info("max_tokens=%d, est_input=~%d tokens, messages=%d (model context=%d)",
+                            effective_max_tokens,
+                            (sum(len(m["content"]) for m in api_messages) // 3) + (len(api_messages) * 4),
+                            len(api_messages), context_length)
+
+            logger.info("Sending chat completion — model=%s, messages=%d, max_tokens=%d",
+                        selected_model, len(api_messages), effective_max_tokens)
             try:
-                for event in client.create_response(
+                for chunk in client.chat_completions_stream(
+                    messages=api_messages,
                     model=selected_model,
-                    input_text=input_text,
-                    previous_response_id=last_response_id,
-                    instructions=system_prompt.strip() if system_prompt.strip() else None,
                     temperature=temperature,
                     top_p=top_p,
-                    max_tokens=max_tokens,
-                    stream=True,
+                    max_tokens=effective_max_tokens,
                 ):
-                    if event["type"] == "delta":
-                        full_response += event["text"]
-                        message_placeholder.markdown(full_response + "\u258c")
-                    elif event["type"] == "completed":
-                        new_response_id = event["response"].get("id")
-
-                message_placeholder.markdown(full_response)
+                    full_response += chunk
+                    message_placeholder.markdown(full_response + "\u258c")
             except Exception as e:
-                full_response = f"Error: {e}"
-                message_placeholder.error(full_response)
+                logger.error("chat_completions_stream failed: %s", e, exc_info=True)
+                message_placeholder.error(f"Error: {e}")
+                return
+
+            message_placeholder.markdown(full_response)
+            logger.info("Response complete — length=%d", len(full_response))
 
             # --- Output shields check ---
             output_shields = config.get("output_shields", [])
@@ -413,19 +411,22 @@ def chat_page():
                     except Exception as e:
                         st.warning(f"Output shield '{shield_id}' check failed: {e}")
 
-            # Register new conversation in conversations.json on first message
-            if new_response_id:
-                if not active_key:
-                    # This is a new chat — the chain_key is the first response ID
-                    chain_key = new_response_id
-                    # Use pending name from pre-rename, or default to first 40 chars
-                    pending_name = st.session_state.pop("pending_chat_name", None)
-                    default_name = pending_name or (prompt[:40] + ("..." if len(prompt) > 40 else ""))
-                    set_user_chat_name(user_id, chain_key, default_name)
-                    st.session_state.active_chat_key = chain_key
+            # Store messages in session state
+            active = st.session_state.get("active_chat_key")
+            if not active:
+                # New conversation — generate an ID and register it
+                import uuid
+                conv_id = str(uuid.uuid4())
+                convs[conv_id] = []
+                pending_name = st.session_state.pop("pending_chat_name", None)
+                default_name = pending_name or (prompt[:40] + ("..." if len(prompt) > 40 else ""))
+                set_user_chat_name(user_id, conv_id, default_name)
+                st.session_state.active_chat_key = conv_id
+                active = conv_id
+                logger.info("New conversation created — id=%s, name=%s", conv_id, default_name)
 
-                last_response_id = new_response_id
-                st.session_state._last_response_id = new_response_id
+            convs[active].append({"role": "user", "content": prompt})
+            convs[active].append({"role": "assistant", "content": full_response})
 
     # --- Chat input ---
     if prompt := st.chat_input("Type your message..."):
