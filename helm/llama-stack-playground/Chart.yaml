@@ -1,0 +1,15 @@
+apiVersion: v2
+name: llama-stack-playground
+description: Llama Stack Playground UI (Canopy) — Streamlit-based chat interface for Llama Stack on OpenShift
+type: application
+version: 1.0.0
+appVersion: "0.3.0-fix"
+icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
+keywords:
+  - llama-stack
+  - playground
+  - streamlit
+  - ui
+  - openshift
+maintainers:
+  - name: hassanbadawy
