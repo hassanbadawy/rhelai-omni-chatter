@@ -179,3 +179,164 @@ Use the token from the **matching** InferenceService SA — not a different serv
 2. The chart sets `LLAMA_STACK_UI_DATA_DIR=/tmp/llama-stack-ui-data` so the loader writes/reads from a fresh empty dir, bypassing the baked YAML entirely. Settings page edits then persist there until pod restart.
 
 **How to detect again:** After deploying, exec into the pod and run `python3 -c "from modules.config import load_config; print(load_config())"`. If `endpoint` shows the developer URL instead of the chart-supplied one, the YAML is shadowing env vars.
+
+---
+
+## 16. Llama Stack `/v1/models` only lists embedding models, never the LLM
+
+**Symptom:** UI's model dropdown is empty (or only shows embedding models). Sending a chat with `model=null` returns:
+```
+400 Bad Request: {"loc":["body","model"], "msg":"Input should be a valid string"}
+```
+
+**Root cause:** The `helm/llama-stack` chart had no `vllm.modelId` value and never registered the LLM model in the runtime config. Llama Stack auto-registers the *embedding* model (sentence-transformers) but the vLLM-served LLM has to be declared explicitly in the `models:` section of the runtime config.
+
+**Fix:** Added `vllm.modelId` to `values.yaml` and a `provider_id: vllm` model entry to both config blocks (guardrails-enabled and disabled) in `templates/llama-stack.yaml`. Verify with:
+```bash
+curl -s $LLAMA_STACK/v1/models | jq '.data[] | select(.model_type=="llm") | .identifier'
+```
+
+**Caveat:** Llama Stack registers the model with a `vllm/` prefix (e.g. `vllm/<modelId>`). Anything that needs to send the model ID in chat completions must use the prefixed identifier, not the raw `modelId` value.
+
+---
+
+## 17. `tls_verify` missing in guardrails-mode vLLM provider config
+
+**Symptom:** Llama Stack returns `Internal Server Error` 500 with `APIConnectionError: Connection error` for every chat completion. The vLLM predictor is up and reachable from inside the llama-stack pod with curl, but llama-stack itself fails.
+
+**Root cause:** OpenShift InferenceServices expose vLLM behind a kube-rbac-proxy on port 8443 with a self-signed serving cert. The default `httpx`/openai client verifies TLS. Without `tls_verify: false` in the vLLM provider config, every connection fails the cert check.
+
+The non-guardrails config block had `tls_verify: {{ .Values.vllm.tlsVerify }}`. The guardrails-enabled block did not — it only rendered `url` and `api_token`. Same chart, different config blocks, only one was correct.
+
+**Fix:** Added `tls_verify: {{ .Values.vllm.tlsVerify }}` to the guardrails-enabled block in `templates/llama-stack.yaml`. Verify with:
+```bash
+oc get cm llama-stack-config -n <ns> -o jsonpath='{.data.config\.yaml}' | grep -A3 'provider_id: vllm'
+```
+Should show three keys: `url`, `api_token`, `tls_verify`.
+
+**How to detect again:** From inside the llama-stack pod, raw `curl -k` to the vLLM URL works but llama-stack's own connections fail. The error message in llama-stack logs is generic `APIConnectionError`, not a TLS-specific one — easy to misdiagnose as a routing issue.
+
+---
+
+## 18. Operator-managed Llama Stack service is named `llama-stack-service`, not `llama-stack`
+
+**Symptom:** Playground/UI pod logs show `APIConnectionError`. Inside the pod, `nslookup llama-stack` fails (DNS exit code 6) but `nslookup llama-stack-service` succeeds.
+
+**Root cause:** When Llama Stack is deployed via the `llama-stack-k8s-operator` (i.e. via a `LlamaStackDistribution` CR, which is what our chart creates), the **operator** generates the Service — and it names the service `<name>-service`, not the same as the deployment.
+
+The `helm/llama-stack-playground` chart originally defaulted `playground.llamaStackUrl` to `http://llama-stack:8321`, which only matches a deployment-as-service pattern (i.e. helm-only, no operator). For operator-managed installs the URL has to be `http://llama-stack-service:8321`.
+
+**Fix:** Both `helm/llama-stack-playground/values.yaml` and `helm/llama-stack-ui/values.yaml` default `llamaStackUrl` / `ui.llamaStackUrl` to `http://llama-stack-service:8321`.
+
+**How to detect again:** `oc get svc -n <ns> | grep llama-stack` — operator deployments show only `llama-stack-service`, helm-only deployments show `llama-stack`.
+
+---
+
+## 19. Genaiops playground 0.3.0-fix file upload crashes with `AttributeError: 'dict' object has no attribute 'content'`
+
+**Symptom:** Uploading a file in the genaiops playground (`/app/llama_stack/distribution/ui/page/upload/upload.py:59`) crashes with `AttributeError`. Streamlit shows a traceback and the vector store is created without any documents.
+
+**Root cause:** The code does `BytesIO(doc.content.encode('utf-8'))` where `doc` is a `RAGDocument`. In `llama-stack-client` 0.3.0, `RAGDocument(...)` returns a plain `dict`, not an object — so `doc.content` raises `AttributeError`. The right access is `doc['content']`.
+
+**Fix:** Not fixable in the genaiops image (read-only, third-party). Three options:
+1. Use our `llama-stack-ui` instead — `documents.py` uses dict-safe `.get()` access patterns.
+2. Build a patched genaiops image with `doc['content']`.
+3. Mount a patched `upload.py` via ConfigMap volume over the broken one.
+
+We chose option 1 — see decision 7.
+
+**How to detect again:** Watch for `AttributeError: 'dict' object has no attribute 'content'` in any code that constructs `RAGDocument` and immediately reads `.content`. The dict-vs-object split in the SDK affects more than just RAGDocument; any instance access on SDK return types should be guarded with `isinstance` or `.get()`.
+
+---
+
+## 20. Gemma 3n produces empty content on RHOAI-shipped vLLM builds
+
+**Symptom:** `gemma-3n-e4b` (and `Gemma3nForConditionalGeneration` models in general) generate `completion_tokens: N` with `finish_reason: "length"` but `content: ""`. Affects both `/v1/chat/completions` and the raw `/v1/completions` endpoint, so it is not a chat template issue.
+
+**Root cause:** The model is registered in vLLM as `Gemma3nForConditionalGeneration` — a multimodal architecture with a hybrid attention + SSM-style mixer (`cache_implementation: hybrid` in `generation_config.json`). The RHOAI-shipped vLLM builds (`0.13.0+rhai11` and `0.11.2+rhai5`, packaged as `registry.redhat.io/rhaiis/vllm-cuda-rhel9` 3.x) do not implement the text decoder for this hybrid architecture correctly. Tokens are sampled but decoded to empty strings.
+
+**Fix:** Stay on a non-multimodal architecture (e.g. `Qwen2.5ForCausalLM`, `Qwen3ForCausalLM`) until a newer RHOAI vLLM image lands. Verify with:
+```bash
+oc logs -l serving.kserve.io/inferenceservice=<isvc> -c kserve-container | grep "Resolved architecture"
+```
+If the architecture name ends in `ForConditionalGeneration` and the runtime image is < vLLM 0.14.0+, expect empty output.
+
+**How to detect again:** A quick `curl -X POST .../v1/completions` with a plain prompt returning `{"text":"", "finish_reason":"length"}` is the smoking gun.
+
+---
+
+## 21. Qwen3 thinking mode: `<think>...</think>` blocks consume `max_tokens` and clutter output
+
+**Symptom:** `redhataiqwen3-8b-fp8-dynamic` chat output starts with a long `<think>...</think>` block, eating most of the `max_tokens` budget before the actual answer begins.
+
+**Root cause:** Qwen3 has a default reasoning mode that emits a thinking trace before the user-facing response. The `<think>` block is part of the model's actual output, not metadata.
+
+**Fix attempts ranked:**
+- ❌ `extra_body: {chat_template_kwargs: {enable_thinking: false}}` — Llama Stack silently drops `extra_body`; the kwarg never reaches vLLM.
+- ❌ `messages: [{role: "system", content: "/no_think"}]` — model emits an empty `<think></think>` shell instead of suppressing it.
+- ❌ `messages: [{role: "user", content: "... /no_think"}]` — same as above.
+- ✓ Direct vLLM call (bypassing Llama Stack) with `chat_template_kwargs: {enable_thinking: false}` — works, but loses the Llama Stack abstractions (shields, RAG, conversations).
+- ✓ Configure vLLM with `--reasoning-parser qwen3` and let it strip `<think>` from `content` → exposes them as `reasoning_content` separately. Requires editing the ServingRuntime args.
+- ✓ Strip `<think>...</think>` in the UI before displaying — easiest if Llama Stack abstractions matter.
+- ✓ Switch to a non-thinking model (`qwen25-7b-instruct`, etc.).
+
+**How to detect again:** Output starts with `<think>` and the actual response is much shorter than the consumed token count.
+
+---
+
+## 22. Inline Milvus stores RAG data ephemerally inside the llama-stack pod
+
+**Symptom:** Vector stores and uploaded documents disappear after a llama-stack pod restart. RAG queries return zero hits.
+
+**Root cause:** The `helm/llama-stack` chart defaults to `milvus.mode: inline`, which configures an embedded Milvus backed by a SQLite file at `/opt/app-root/src/.llama/distributions/rh/milvus.db`. There is no PVC; the file lives on the pod's writable layer and is wiped on every restart.
+
+**Fix:** For persistence, deploy the standalone Milvus chart (`helm/milvus/`) and switch llama-stack to remote mode:
+```bash
+helm upgrade llama-stack helm/llama-stack/ -n <ns> --reuse-values \
+  --set milvus.mode=remote \
+  --set milvus.endpoint="http://milvus.<ns>.svc:19530" \
+  --set milvus.token="root:Milvus"
+```
+
+**How to detect again:** `curl /v1/providers | jq '.[] | select(.api=="vector_io")'` — if `provider_type` is `inline::milvus`, data is ephemeral. `remote::milvus` is the persistent mode.
+
+---
+
+## 23. `language_detection` shield mis-classifies short English greetings as non-English
+
+**Symptom:** Sending `hi` or `hey, how are you` triggers `language_detection blocked input: ... (confidence: 0.91-0.98)`. The same shield works fine on full sentences.
+
+**Root cause:** The detector model (`papluca/xlm-roberta-base-language-detection`) is brittle on very short text. Two- to four-word inputs are commonly mis-classified as Hindi, Hausa, Tagalog, etc. with high confidence.
+
+**Why it "worked" in the genaiops playground:** Genaiops only invokes shields in **Agent-based mode**. The default mode is **Direct**, which calls the LLM with no shield wrapping. Even in Agent mode, the agent runtime wraps the user message in a longer system+context preamble before passing it to the safety call, so the detector sees a multi-sentence input and classifies it correctly.
+
+Our `llama-stack-ui` runs `/v1/safety/run-shield` directly on the raw user message — short greetings hit the detector unwrapped and are blocked.
+
+**Fix options:**
+1. Drop `language_detection` from `input_shields`/`output_shields` in the Settings page — recommended if you support multilingual users anyway.
+2. Raise the shield's `confidence_threshold` (in `helm/llama-stack/values.yaml` under `guardrails.language_detection.confidence_threshold`) from `0.85` to `0.99`.
+3. Add a min-length skip in `chat.py` to bypass the shield for messages under N words.
+4. Apply the shield only to the LLM output (not user input) — the LLM tends to produce longer responses where the detector is more reliable.
+
+**How to detect again:** Shield blocks a clearly English message at ≥0.9 confidence. Confirm by sending a longer English sentence — if that passes, the issue is the detector's short-text reliability, not a real violation.
+
+---
+
+## 24. `helm upgrade --reuse-values` carries forward stale `vllm.url` / `vllm.apiToken` / `vllm.modelId`
+
+**Symptom:** After someone swaps the running InferenceService model in the cluster (e.g. stops Qwen3, starts Qwen2.5), `helm upgrade --reuse-values` keeps the old URL/token/modelId. Llama Stack returns `APIConnectionError` (DNS) or `404 model not found`.
+
+**Root cause:** `--reuse-values` is a footgun whenever any subset of values is environment-specific. It does exactly what it says — reuses the prior values literally — so cluster-state changes outside of helm's view (model swap, SA token rotation) silently desync.
+
+**Fix:** Always re-source the cluster-truth values on every helm upgrade:
+```bash
+TOKEN=$(oc get secret -n <ns> default-token-<isvc>-sa -o jsonpath='{.data.token}' | base64 -d)
+helm upgrade llama-stack helm/llama-stack/ -n <ns> --reuse-values \
+  --set vllm.url="https://<isvc>-predictor.<ns>.svc.cluster.local:8443/v1" \
+  --set vllm.apiToken="$TOKEN" \
+  --set vllm.modelId="<isvc>"
+```
+
+The `default-token-<isvc>-sa` secret is reproducible from the InferenceService name, so this is fully scriptable.
+
+**How to detect again:** `helm get values llama-stack -n <ns> | grep -E 'url|modelId'` — if the URL or modelId reference an InferenceService that no longer exists (or is `Stopped`), this is the issue.

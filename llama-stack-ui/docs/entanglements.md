@@ -26,8 +26,8 @@ All keys live in `st.session_state`. Owner = file that writes the key. Readers =
 
 | Field | Written by | Read by | Notes |
 |-------|-----------|---------|-------|
-| `endpoint` | `settings.py` | `api.py` (`base_url` property, every request) | Every API call re-reads config via `load_config()`. No caching at the client level. |
-| `model` | `settings.py` | `chat.py` | Falls back to first model from server if empty. |
+| `endpoint` | `settings.py` | `api.py` (`base_url` property, every request) | Every API call re-reads config via `load_config()`. No caching at the client level. Falls back to `LLAMA_STACK_API_ENDPOINT` env var when YAML value is empty/missing. |
+| `model` | `settings.py` | `chat.py` | Falls back to first model from server if empty. Initial default sourced from `DEFAULT_MODEL` env var. |
 | `embedding_model` | `settings.py` | `documents.py` (create vector store) | |
 | `embedding_dimension` | `settings.py` | `documents.py` (create vector store) | Derived from the selected embedding model's metadata. |
 | `vector_io_provider` | `settings.py` | `documents.py` (create vector store) | |
@@ -40,6 +40,16 @@ All keys live in `st.session_state`. Owner = file that writes the key. Readers =
 | `safety_enabled` | `settings.py` | `chat.py` | Gates all shield checks. When false, input/output shield calls are skipped entirely. |
 | `input_shields` | `settings.py` | `chat.py` | List of shield IDs run on user input before sending to LLM. Populated from `/v1/shields` multiselect. |
 | `output_shields` | `settings.py` | `chat.py` | List of shield IDs run on LLM response before displaying. |
+
+---
+
+## Environment Variable Inputs
+
+| Env var | Read by | Purpose |
+|---------|---------|---------|
+| `LLAMA_STACK_API_ENDPOINT` | `modules/config.py` (`load_config()`) | Default backend URL used when `config.yaml` does not specify `endpoint`. Set by the helm chart from `ui.llamaStackUrl`. |
+| `DEFAULT_MODEL` | `modules/config.py` (`load_config()`) | Default model identifier used when `config.yaml` does not specify `model`. Set by the helm chart from `ui.defaultModel`. |
+| `LLAMA_STACK_UI_DATA_DIR` | `modules/config.py` (module-level) | Overrides the directory where `config.yaml` and `conversations.json` are read/written. Defaults to the package directory if unset. The chart points it at `/tmp/llama-stack-ui-data` so the read-only baked YAML does not shadow env-supplied defaults. |
 
 ---
 

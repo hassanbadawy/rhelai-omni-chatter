@@ -108,8 +108,33 @@ helm upgrade llama-stack helm/llama-stack/ -n <namespace> \
 
 ### Milvus Modes
 
-- `milvus.mode=inline` (default) — embedded Milvus with SQLite, no external service
-- `milvus.mode=remote` — connects to standalone Milvus service, default token `root:Milvus`
+- `milvus.mode=inline` (default) — embedded Milvus with SQLite **inside the llama-stack pod**. No external service needed, but data is **lost on every pod restart** (no PVC backing the SQLite file).
+- `milvus.mode=remote` — connects to a standalone Milvus service. Default token `root:Milvus`. Use this for any RAG data that must survive restarts.
+
+Verify which mode is live with:
+```bash
+oc exec -n <ns> deployment/llama-stack -- curl -s http://llama-stack-service:8321/v1/providers \
+  | jq '.[] | select(.api=="vector_io") | {provider_id, provider_type}'
+```
+
+### Required values when registering an LLM
+
+Llama Stack auto-registers the embedding model but **not** the vLLM-served LLM. The chart needs `vllm.modelId` set to the served-model-name, and the model is exposed via `/v1/models` with a `vllm/` prefix (e.g. `vllm.modelId=qwen25-7b-instruct` → `/v1/models` returns `vllm/qwen25-7b-instruct`). UIs must use the prefixed identifier when sending chat completions.
+
+### Operator service name
+
+The chart deploys a `LlamaStackDistribution` CR; the **operator** then creates the Service as `llama-stack-service` (not `llama-stack`). Anything that connects to llama-stack from inside the cluster must use `http://llama-stack-service:8321`.
+
+### Helm upgrade caveat
+
+`--reuse-values` carries forward whatever was previously set, including `vllm.url`, `vllm.apiToken`, `vllm.modelId`. When the running InferenceService is swapped (model change) or its SA token is rotated, those reused values go stale and cause `APIConnectionError` (DNS) or `404 model not found`. Always re-source these from the live cluster on every upgrade:
+```bash
+TOKEN=$(oc get secret -n <ns> default-token-<isvc>-sa -o jsonpath='{.data.token}' | base64 -d)
+helm upgrade llama-stack helm/llama-stack/ -n <ns> --reuse-values \
+  --set vllm.url="https://<isvc>-predictor.<ns>.svc.cluster.local:8443/v1" \
+  --set vllm.apiToken="$TOKEN" \
+  --set vllm.modelId="<isvc>"
+```
 
 ### Helm Repo
 
@@ -125,6 +150,10 @@ To publish a new version: bump `Chart.yaml` version, `helm package`, `gh release
 ## Helm Chart: llama-stack-playground (`helm/llama-stack-playground/`)
 
 A standalone Helm chart that deploys the Streamlit playground UI (`quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix`) as an OpenShift workload. It is **independent** of the `llama-stack` chart — it only needs a Llama Stack backend URL to connect to.
+
+**Known bugs in the upstream image:**
+- File upload crashes with `AttributeError: 'dict' object has no attribute 'content'` at `/app/llama_stack/distribution/ui/page/upload/upload.py:59` — the SDK 0.3.0 returns `RAGDocument` as a dict but the code uses attribute access. Use `helm/llama-stack-ui` for document upload until upstream fixes this.
+- Default chat mode is **Direct**, which bypasses safety shields entirely. Shields only apply in **Agent-based** mode (and even there, the agent runtime wraps the user message before calling the safety API). If you need shields on every plain chat message, use `helm/llama-stack-ui` instead.
 
 ### Key values
 
@@ -179,7 +208,7 @@ Or override `image.repository` to point at a public image you've built and pushe
 |-------|---------|---------|
 | `ui.llamaStackUrl` | `http://llama-stack-service:8321` | Llama Stack backend URL — exported as `LLAMA_STACK_API_ENDPOINT` |
 | `ui.defaultModel` | `""` | Default model — exported as `DEFAULT_MODEL`. Must include the `vllm/` prefix (e.g. `vllm/qwen25-7b-instruct`) |
-| `image.repository` | `image-registry.openshift-image-registry.svc:5000/agentic-ivr/llama-stack-ui` | In-cluster image |
+| `image.repository` | `image-registry.openshift-image-registry.svc:5000/<namespace>/llama-stack-ui` | In-cluster image — `<namespace>` is whichever namespace ran `oc new-build`. Override for external registries. |
 | `route.enabled` | `true` | Creates an OpenShift Route with TLS edge termination |
 
 ### Config sourcing
@@ -328,7 +357,7 @@ Violation: [[{"text":"...","detection_type":"INJECTION","score":0.99,...}]]
 |-----------|----------|----------------|
 | `hap` | guardrails-detector-ibm-hap | Hate, abuse, profanity |
 | `prompt_injection` | prompt-injection-detector | Prompt injection attacks |
-| `language_detection` | language-detector | Non-English text |
+| `language_detection` | language-detector | Non-English text. **Caveat:** the underlying `papluca/xlm-roberta-base-language-detection` model mis-classifies short greetings (`hi`, `hey, how are you`) as non-English at >0.9 confidence. Either drop this shield, raise its threshold to ≥0.99, or skip it for short messages. |
 | `regex` | Built-in regex | Custom patterns (e.g. `(?i).*fight club.*`) |
 
 ### Regex Shield — Pattern Examples
@@ -491,6 +520,22 @@ The genaiops chart names vLLM providers as `vllm-<model>` (e.g. `vllm-llama32/ll
 ### Helm Release Conflicts with Manually Created Routes
 
 If you manually `oc create route` for llama-stack, then `helm upgrade` will fail with "cannot import into current release". Delete the manual route before upgrading: `oc delete route llama-stack -n <namespace>`.
+
+### Gemma 3n Produces Empty Output on RHOAI vLLM
+
+`gemma-3n-e4b` (registered in vLLM as `Gemma3nForConditionalGeneration` — multimodal, hybrid attention/SSM architecture) generates `completion_tokens > 0` but `content: ""` on the RHOAI-shipped vLLM images (`0.13.0+rhai11`, `0.11.2+rhai5`). The text decoder for the hybrid architecture is not wired up correctly. Confirmed via direct `/v1/completions` (chat template not involved). **Workaround: stay on a `ForCausalLM` model** (Qwen2.5/Qwen3, Llama3, etc.) until a newer RHOAI vLLM image lands.
+
+### Qwen3 `<think>...</think>` Blocks Eat Token Budget
+
+`redhataiqwen3-8b-fp8-dynamic` and other Qwen3 variants emit a `<think>...</think>` reasoning trace before the user-facing response, consuming most of `max_tokens`. `extra_body: chat_template_kwargs.enable_thinking=false` is silently dropped by Llama Stack. `/no_think` system prompt only emits an empty `<think></think>` shell. Reliable fixes: (a) configure vLLM with `--reasoning-parser qwen3`, (b) strip `<think>...</think>` in the UI, or (c) switch to a non-thinking model like `qwen25-7b-instruct`.
+
+### `vllm.modelId` Required, and Model is Prefixed with `vllm/`
+
+Llama Stack auto-registers the embedding model from `inline::sentence-transformers` but **not** the vLLM-served LLM. Without `vllm.modelId` set in our chart, `/v1/models` only returns embedding models, and chat completions fail with `400 Bad Request: model field expected string`. After registration, the LLM is exposed with a `vllm/` prefix (e.g. `vllm/qwen25-7b-instruct`) — UIs must use the prefixed identifier.
+
+### `tls_verify` Required in Guardrails-Mode vLLM Provider Config
+
+OpenShift InferenceServices expose vLLM via kube-rbac-proxy on port 8443 with self-signed TLS. The non-guardrails llama-stack config block in our chart had `tls_verify: false` from the start; the guardrails-enabled block was missing it for a while, causing `APIConnectionError 500` on every chat completion despite curl from the pod working fine. Always check both config blocks contain `tls_verify` when editing the chart.
 
 ## OpenShift Environment
 

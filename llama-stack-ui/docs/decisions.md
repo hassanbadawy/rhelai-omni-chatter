@@ -63,3 +63,33 @@ Each entry answers: what was chosen, what was the alternative, and why.
 **Why:** Reserving half the context for input (conversation history + system prompt + RAG context) and half for output is a safe default. Without this cap, small-context models like `qwen25-vl-7b-instruct` (2024 tokens) will error on every request if `max_tokens` is set to e.g. 2000 with any non-trivial input.
 
 **Related:** The oldest messages in the conversation are trimmed (starting after the system message) until the estimated input token count fits within `context_length - effective_max_tokens`.
+
+---
+
+## 7. Ship our own UI chart instead of relying on `llama-stack-playground`
+
+**Chosen:** `helm/llama-stack-ui` packages this Streamlit app and is published alongside the upstream `llama-stack-playground` chart.
+
+**Alternative:** Use only the genaiops `quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix` image (which has its own helm chart in our repo).
+
+**Why:**
+- Genaiops 0.3.0-fix has a bug in `page/upload/upload.py` that fails on `doc.content.encode('utf-8')` because `RAGDocument` returns a `dict` (not an attribute object) in `llama-stack-client` 0.3.0. Document upload is broken there.
+- Our UI does context-length probing and trims history; the genaiops UI does not.
+- Our UI runs `/v1/safety/run-shield` on every message in Direct mode; the genaiops UI only invokes shields in Agent mode.
+- Our UI detects SSE errors that arrive inside HTTP 200 streams (`{"error": {...}}` data lines) and raises; genaiops silently truncates.
+
+**Trade-off:** Genaiops includes Agent-based features (ReAct, tool calling) that we don't have. Use both: ours for chat + RAG + guardrails, theirs for agent experimentation.
+
+---
+
+## 8. `LLAMA_STACK_UI_DATA_DIR` redirects writable state away from the read-only image
+
+**Chosen:** `modules/config.py` reads/writes `config.yaml` and `conversations.json` under `${LLAMA_STACK_UI_DATA_DIR}` if set, defaulting to the package directory.
+
+**Why:** The Containerfile bakes a developer's `config.yaml` into the image at `/opt/app-root/src/config.yaml`. Without redirection:
+- That YAML's `endpoint` value (a stale dev cluster URL) overrides the helm-supplied `LLAMA_STACK_API_ENDPOINT` env var, because `load_config()` reads YAML first.
+- The OpenShift container also runs read-only at the image layer, so the Settings page can't write back.
+
+The chart sets `LLAMA_STACK_UI_DATA_DIR=/tmp/llama-stack-ui-data` (a writable empty dir). On first launch the loader sees no YAML, falls back to env-var defaults, and the Settings page persists edits to the writable path. Data is ephemeral across pod restarts — acceptable since most fields are also derivable from env or server queries.
+
+**Related:** `load_config()` was also changed to treat empty YAML values as "not set" and prefer env vars in that case, so even an existing-but-blank config.yaml does not shadow the env.
