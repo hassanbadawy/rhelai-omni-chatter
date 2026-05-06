@@ -23,6 +23,7 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 - [`llama-stack-ui/docs/pitfalls.md`](llama-stack-ui/docs/pitfalls.md) — pitfall log with root cause and fix for every non-obvious bug hit so far
 - [`llama-stack-ui/docs/llama-stack-api-improvements.md`](llama-stack-ui/docs/llama-stack-api-improvements.md) — future improvement opportunities across the Llama Stack API
 - [`llama-stack-ui/docs/model-benchmarks.md`](llama-stack-ui/docs/model-benchmarks.md) — measured latency/throughput per model with per-use-case recommendations (voice agent, chat, RAG, agent/tool-using)
+- [`llama-stack-ui/docs/future-work.md`](llama-stack-ui/docs/future-work.md) — ideas explored but not implemented (GitOps via ArgoCD, fresh-cluster bootstrap, llm-d distributed inference)
 
 **Wiki rule:** After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `docs/` page before closing.
 

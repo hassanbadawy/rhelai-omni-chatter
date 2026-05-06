@@ -58,6 +58,7 @@ No test suite exists in this repository.
   - `docs/pitfalls.md` — pitfall log with root cause and fix for every non-obvious bug hit so far
   - `docs/api-improvements.md` — future improvement opportunities across the Llama Stack API
   - `docs/model-benchmarks.md` — measured latency/throughput per model on the available runtime, with a recommendation table per use case (voice agent, chat, RAG, agent/tool-using)
+  - `docs/future-work.md` — ideas explored but not implemented (GitOps via ArgoCD, fresh-cluster bootstrap script, llm-d distributed inference) with rationale and first-step notes
 
 ## Wiki Rule
 
