@@ -57,6 +57,7 @@ No test suite exists in this repository.
   - `docs/entanglements.md` — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
   - `docs/pitfalls.md` — pitfall log with root cause and fix for every non-obvious bug hit so far
   - `docs/api-improvements.md` — future improvement opportunities across the Llama Stack API
+  - `docs/model-benchmarks.md` — measured latency/throughput per model on the available runtime, with a recommendation table per use case (voice agent, chat, RAG, agent/tool-using)
 
 ## Wiki Rule
 

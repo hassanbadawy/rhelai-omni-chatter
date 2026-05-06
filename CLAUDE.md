@@ -22,6 +22,7 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 - [`llama-stack-ui/docs/entanglements.md`](llama-stack-ui/docs/entanglements.md) — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
 - [`llama-stack-ui/docs/pitfalls.md`](llama-stack-ui/docs/pitfalls.md) — pitfall log with root cause and fix for every non-obvious bug hit so far
 - [`llama-stack-ui/docs/llama-stack-api-improvements.md`](llama-stack-ui/docs/llama-stack-api-improvements.md) — future improvement opportunities across the Llama Stack API
+- [`llama-stack-ui/docs/model-benchmarks.md`](llama-stack-ui/docs/model-benchmarks.md) — measured latency/throughput per model with per-use-case recommendations (voice agent, chat, RAG, agent/tool-using)
 
 **Wiki rule:** After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `docs/` page before closing.
 
@@ -536,6 +537,22 @@ Llama Stack auto-registers the embedding model from `inline::sentence-transforme
 ### `tls_verify` Required in Guardrails-Mode vLLM Provider Config
 
 OpenShift InferenceServices expose vLLM via kube-rbac-proxy on port 8443 with self-signed TLS. The non-guardrails llama-stack config block in our chart had `tls_verify: false` from the start; the guardrails-enabled block was missing it for a while, causing `APIConnectionError 500` on every chat completion despite curl from the pod working fine. Always check both config blocks contain `tls_verify` when editing the chart.
+
+## Model Selection by Use Case
+
+Measured on the available RHOAI vLLM build with `qwen25-7b-instruct` and `gpt-oss-20b`. Full numbers, methodology, and the benchmark recipe live in [`llama-stack-ui/docs/model-benchmarks.md`](llama-stack-ui/docs/model-benchmarks.md).
+
+| Use case | Recommended | Why |
+|----------|-------------|-----|
+| Voice agent (STT → LLM → TTS) | `qwen25-7b-instruct` | TTFT to user-visible content ~45 ms (vs ~500 ms for gpt-oss). gpt-oss reasons silently before any content token, which becomes audible dead air. Multilingual coverage (Arabic, Urdu, Hindi, Indonesian) is also stronger than gpt-oss. |
+| Plain text chat (streaming UI) | `qwen25-7b-instruct` | Same TTFT argument — characters start appearing immediately, which feels responsive. |
+| Long RAG answers | `gpt-oss-20b` | ~3× higher throughput (98 vs 30 tok/s). The TTFT penalty amortizes over a long response. |
+| Agent / tool-using flows | `gpt-oss-20b` | Hidden chain-of-thought improves tool selection and multi-step planning. |
+| Multilingual (Arabic, Urdu, Hindi, Indonesian) | `qwen25-7b-instruct` | gpt-oss is English-first. |
+
+**Reasoning models stream a separate field.** `gpt-oss-20b` (and Qwen3) emit chain-of-thought tokens in `delta.reasoning_content` (and a legacy `delta.reasoning`), not `delta.content`. A UI that only reads `delta.content` will appear frozen until the model finishes reasoning. If you stream from a reasoning model, surface the reasoning under a collapsible or skip it explicitly — don't ignore it.
+
+**Routing pattern for production.** Both InferenceServices can run side-by-side. Llama Stack registers them as separate model IDs (`vllm/qwen25-7b-instruct`, `vllm/gpt-oss-20b`), so a router in your application can pick per turn — short conversational input → qwen25, longer or tool-flagged input → gpt-oss. No infrastructure changes needed.
 
 ## OpenShift Environment
 
