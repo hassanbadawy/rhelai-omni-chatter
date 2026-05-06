@@ -528,7 +528,7 @@ entries:
     version: 1.0.2
   - apiVersion: v2
     appVersion: 0.3.0-fix
-    created: "2026-05-06T00:40:03.400623+03:00"
+    created: "2026-05-06T03:02:48.6375+03:00"
     description: Llama Stack Playground UI (Canopy) — Streamlit-based chat interface
       for Llama Stack on OpenShift
     digest: ef15d7dd4fc88d4e16b3fd094734bd2175980c23e1665faa1c0bb7708ded7e7a
@@ -544,11 +544,11 @@ entries:
     name: llama-stack-playground
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-playground-1.0.1/llama-stack-playground-1.0.1.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-ui-1.0.0/llama-stack-playground-1.0.1.tgz
     version: 1.0.1
   - apiVersion: v2
     appVersion: 0.3.0-fix
-    created: "2026-05-06T00:40:03.400391+03:00"
+    created: "2026-05-06T03:02:48.637067+03:00"
     description: Llama Stack Playground UI (Canopy) — Streamlit-based chat interface
       for Llama Stack on OpenShift
     digest: 87db73f21c241b751804b2af9584403dcb93fdc3659e43a2476c359c323c43ce
@@ -564,15 +564,15 @@ entries:
     name: llama-stack-playground
     type: application
     urls:
-    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-playground-1.0.1/llama-stack-playground-1.0.0.tgz
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-ui-1.0.0/llama-stack-playground-1.0.0.tgz
     version: 1.0.0
   llama-stack-ui:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-05-06T00:02:51.835152436Z"
+    created: "2026-05-06T03:02:48.637766+03:00"
     description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
       shields, and document management
-    digest: 988207eb1d64e83c169b952ba20d7e8e39bccb3f72640e706f48ec6ec2f0f453
+    digest: 8e437b6074f2b0d28daaabac8e69426082eff1957dec9c089ddafeef2eac9530
     icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
     keywords:
     - llama-stack
@@ -760,4 +760,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-06T00:02:51.835214955Z"
+generated: "2026-05-06T03:02:48.63618+03:00"
