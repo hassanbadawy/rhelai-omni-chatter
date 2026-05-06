@@ -1,0 +1,112 @@
+replicaCount: 1
+
+image:
+  # Default targets the OpenShift internal registry. Build the image first with:
+  #   oc new-build --binary --strategy=docker --name=llama-stack-ui -n <namespace>
+  #   oc patch bc/llama-stack-ui -n <namespace> --type=json \
+  #     -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
+  #   oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n <namespace>
+  # Or override `image.repository` to point at a public registry image.
+  repository: image-registry.openshift-image-registry.svc:5000/agentic-ivr/llama-stack-ui
+  tag: "latest"
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8501
+  annotations: {}
+
+route:
+  enabled: true
+  annotations: {}
+  host: ""
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: llama-stack-ui.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# UI configuration
+ui:
+  # Llama Stack backend URL — operator deployments use llama-stack-service
+  llamaStackUrl: "http://llama-stack-service:8321"
+  # Default model to use (must include the vllm/ prefix as registered in Llama Stack)
+  defaultModel: ""
+
+# Additional environment variables
+env:
+  STREAMLIT_SERVER_PORT: "8501"
+  STREAMLIT_SERVER_ADDRESS: "0.0.0.0"
+  STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+  LLAMA_STACK_UI_DATA_DIR: "/tmp/llama-stack-ui-data"
+
+networkPolicy:
+  enabled: false

@@ -165,3 +165,17 @@ Use the token from the **matching** InferenceService SA — not a different serv
 **Root cause:** The embedding dimension must match the model's actual output dimension. The Settings page reads `embedding_dimension` from the model's metadata, but if the user edits `config.yaml` manually or the metadata is missing, the stored dimension may be wrong.
 
 **Fix:** Always select the embedding model via the Settings UI rather than editing `config.yaml` directly. The selectbox derives dimension from live model metadata.
+
+---
+
+## 15. Container `config.yaml` shadows env-var defaults
+
+**Symptom:** Helm chart sets `LLAMA_STACK_API_ENDPOINT` env var but the deployed UI keeps trying to connect to the old endpoint baked into `config.yaml` that shipped with the image.
+
+**Root cause:** `modules/config.py` loads `config.yaml` first and only falls back to env vars when the YAML key is missing. The image bakes in a developer's local `config.yaml` (with their personal endpoint), so env var overrides are silently ignored.
+
+**Fix:** Two complementary changes —
+1. `load_config()` now treats empty-string values in YAML as "not set" and pulls from env (`LLAMA_STACK_API_ENDPOINT`, `DEFAULT_MODEL`).
+2. The chart sets `LLAMA_STACK_UI_DATA_DIR=/tmp/llama-stack-ui-data` so the loader writes/reads from a fresh empty dir, bypassing the baked YAML entirely. Settings page edits then persist there until pod restart.
+
+**How to detect again:** After deploying, exec into the pod and run `python3 -c "from modules.config import load_config; print(load_config())"`. If `endpoint` shows the developer URL instead of the chart-supplied one, the YAML is shadowing env vars.

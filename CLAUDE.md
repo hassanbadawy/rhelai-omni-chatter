@@ -31,6 +31,7 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 ├── helm/
 │   ├── llama-stack/              # Llama Stack chart (guardrails + milvus + RAG)
 │   ├── llama-stack-playground/   # Streamlit playground UI chart (standalone, points at any Llama Stack)
+│   ├── llama-stack-ui/           # Our custom Streamlit UI chart (built from llama-stack-ui/)
 │   ├── guardrails-orchestrator/  # Orchestrator + bundled HF detectors (v0.2.0+, self-contained)
 │   ├── anythingllm/
 │   ├── dashy/
@@ -149,6 +150,49 @@ helm install llama-stack-playground helm/llama-stack-playground/ -n <namespace> 
 ### NetworkPolicy
 
 `networkPolicy.enabled` defaults to `false`. An earlier version defaulted to `true` with egress targeting label `app.kubernetes.io/name: llama-stack`, which caused `APIConnectionError` because the llama-stack chart labels pods as `app: llama-stack` — a mismatch that silently blocked all outbound traffic from the playground.
+
+## Helm Chart: llama-stack-ui (`helm/llama-stack-ui/`)
+
+A standalone Helm chart that deploys our **custom** Streamlit UI (`llama-stack-ui/` source dir) as an OpenShift workload. Use this in preference to the genaiops `llama-stack-playground` chart when you need:
+
+- Working document upload (genaiops 0.3.0-fix has a `RAGDocument` dict-vs-object bug that breaks file uploads)
+- Context-length probing (`max_tokens` capped to `context_length / 2` for small-context models)
+- SSE error detection in HTTP 200 streams
+- Conversation history with safety-shield checks on input AND output
+
+### Building the image
+
+The chart defaults to the OpenShift internal registry. Build from source first:
+
+```bash
+oc new-build --binary --strategy=docker --name=llama-stack-ui -n <namespace>
+oc patch bc/llama-stack-ui -n <namespace> --type=json \
+  -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
+oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n <namespace>
+```
+
+Or override `image.repository` to point at a public image you've built and pushed yourself.
+
+### Key values
+
+| Value | Default | Purpose |
+|-------|---------|---------|
+| `ui.llamaStackUrl` | `http://llama-stack-service:8321` | Llama Stack backend URL — exported as `LLAMA_STACK_API_ENDPOINT` |
+| `ui.defaultModel` | `""` | Default model — exported as `DEFAULT_MODEL`. Must include the `vllm/` prefix (e.g. `vllm/qwen25-7b-instruct`) |
+| `image.repository` | `image-registry.openshift-image-registry.svc:5000/agentic-ivr/llama-stack-ui` | In-cluster image |
+| `route.enabled` | `true` | Creates an OpenShift Route with TLS edge termination |
+
+### Config sourcing
+
+The UI loads its config from `config.yaml` first, then falls back to env vars (`LLAMA_STACK_API_ENDPOINT`, `DEFAULT_MODEL`). To make the helm-managed env vars actually apply, the chart sets `LLAMA_STACK_UI_DATA_DIR=/tmp/llama-stack-ui-data` so the read-only baked `config.yaml` (in the image) is bypassed and the env-var defaults take effect on first launch. Users can then override values from the Settings page; changes persist in `/tmp/llama-stack-ui-data/config.yaml` until the pod restarts.
+
+### Quick deploy
+
+```bash
+helm install llama-stack-ui helm/llama-stack-ui/ -n <namespace> \
+  --set ui.llamaStackUrl="http://llama-stack-service:8321" \
+  --set ui.defaultModel="vllm/qwen25-7b-instruct"
+```
 
 ## Streamlit Playground (`llama-stack-ui/`)
 

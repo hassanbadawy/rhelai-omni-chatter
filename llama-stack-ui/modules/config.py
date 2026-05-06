@@ -3,12 +3,15 @@ import os
 
 import yaml
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yaml")
-CONVERSATIONS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "conversations.json")
+_DEFAULT_DIR = os.path.dirname(os.path.dirname(__file__))
+_DATA_DIR = os.environ.get("LLAMA_STACK_UI_DATA_DIR", _DEFAULT_DIR)
+os.makedirs(_DATA_DIR, exist_ok=True)
+CONFIG_PATH = os.path.join(_DATA_DIR, "config.yaml")
+CONVERSATIONS_PATH = os.path.join(_DATA_DIR, "conversations.json")
 
 DEFAULTS = {
-    "endpoint": "",
-    "model": "",
+    "endpoint": os.environ.get("LLAMA_STACK_API_ENDPOINT", ""),
+    "model": os.environ.get("DEFAULT_MODEL", ""),
     "embedding_model": "",
     "vector_io_provider": "",
     "user_id": "",
@@ -24,13 +27,23 @@ DEFAULTS = {
 
 
 def load_config():
-    """Load config from YAML file, falling back to defaults."""
+    """Load config from YAML file, falling back to defaults.
+
+    Endpoint and model are sourced from env vars (LLAMA_STACK_API_ENDPOINT,
+    DEFAULT_MODEL) if config.yaml does not specify them. Container deployments
+    rely on this so the chart can inject the backend URL without baking it
+    into config.yaml.
+    """
     config = dict(DEFAULTS)
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH) as f:
             saved = yaml.safe_load(f)
             if saved:
                 config.update(saved)
+    if not config.get("endpoint"):
+        config["endpoint"] = os.environ.get("LLAMA_STACK_API_ENDPOINT", "")
+    if not config.get("model"):
+        config["model"] = os.environ.get("DEFAULT_MODEL", "")
     return config
 
 
