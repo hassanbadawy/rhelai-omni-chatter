@@ -566,6 +566,28 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-playground-1.0.1/llama-stack-playground-1.0.0.tgz
     version: 1.0.0
+  llama-stack-ui:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-05-06T00:02:51.835152436Z"
+    description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
+      shields, and document management
+    digest: 988207eb1d64e83c169b952ba20d7e8e39bccb3f72640e706f48ec6ec2f0f453
+    icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
+    keywords:
+    - llama-stack
+    - streamlit
+    - ui
+    - openshift
+    - rag
+    - guardrails
+    maintainers:
+    - name: hassanbadawy
+    name: llama-stack-ui
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-ui-1.0.0/llama-stack-ui-1.0.0.tgz
+    version: 1.0.0
   milvus:
   - apiVersion: v2
     appVersion: "2.4"
@@ -738,4 +760,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-06T00:00:43.829162822Z"
+generated: "2026-05-06T00:02:51.835214955Z"
