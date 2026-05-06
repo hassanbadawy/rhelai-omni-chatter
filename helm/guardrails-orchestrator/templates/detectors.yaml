@@ -25,6 +25,10 @@ spec:
         app.kubernetes.io/instance: {{ $.Release.Name }}
         app.kubernetes.io/part-of: trustyai
     spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
         - name: download-model
           image: "quay.io/trustyai/guardrails-detector-huggingface-runtime:latest"
@@ -48,6 +52,30 @@ spec:
                 secretKeyRef:
                   name: guardrails-hf-token
                   key: token
+            {{- end }}
+            {{- with $.Values.detectorDefaults.proxy }}
+            {{- if .httpsProxy }}
+            - name: HTTPS_PROXY
+              value: {{ .httpsProxy | quote }}
+            - name: https_proxy
+              value: {{ .httpsProxy | quote }}
+            {{- end }}
+            {{- if .httpProxy }}
+            - name: HTTP_PROXY
+              value: {{ .httpProxy | quote }}
+            - name: http_proxy
+              value: {{ .httpProxy | quote }}
+            {{- end }}
+            {{- if .noProxy }}
+            - name: NO_PROXY
+              value: {{ .noProxy | quote }}
+            - name: no_proxy
+              value: {{ .noProxy | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $.Values.detectorDefaults.hfEndpoint }}
+            - name: HF_ENDPOINT
+              value: {{ $.Values.detectorDefaults.hfEndpoint | quote }}
             {{- end }}
           securityContext:
             allowPrivilegeEscalation: false

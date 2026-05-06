@@ -3,6 +3,11 @@
 
 replicas: 1
 
+# -- Image pull secrets for private registries (e.g. when mirroring registry.redhat.io)
+# Applied to orchestrator pod, detector pods, and detector initContainers.
+imagePullSecrets: []
+#  - name: my-pull-secret
+
 # -- Orchestrator images
 images:
   orchestrator: "registry.redhat.io/rhoai/odh-fms-guardrails-orchestrator-rhel9@sha256:c194fea3e7005f3aa8043efeb3a89d036cc46c923c50719b49a7a47d90b1140c"
@@ -56,6 +61,16 @@ detectorDefaults:
   # If a per-detector hfToken is set, it takes precedence over this global value.
   # Leave empty for public models (no token needed).
   hfToken: ""
+  # -- Optional HuggingFace mirror endpoint (e.g. for air-gapped clusters).
+  # Sets HF_ENDPOINT env var on initContainers — they'll fetch models from this
+  # URL instead of huggingface.co. Leave empty for default huggingface.co.
+  hfEndpoint: ""
+  # -- Egress proxy settings. Required when the cluster has an HTTPS egress proxy
+  # blocking direct access to huggingface.co. Applied to initContainers.
+  proxy:
+    httpsProxy: ""
+    httpProxy: ""
+    noProxy: ".svc,.cluster.local,localhost,127.0.0.1"
   resources:
     requests:
       cpu: "500m"

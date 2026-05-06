@@ -1,6 +1,10 @@
 distribution: rh-dev
 
-# -- Custom image with trusty_fms safety provider (guardrails support)
+# -- Custom image with trusty_fms safety provider (used when guardrails.enabled=true).
+# This is a third-party image. If the cluster cannot pull from quay.io/rhoai-genaiops,
+# mirror this image to a private registry and override the value here.
+# The standard mode (guardrails.enabled=false) uses the rh-dev image bundled
+# with the RHOAI Llama Stack operator and does not need a custom image.
 image: "quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3"
 replicas: 1
 port: 8321

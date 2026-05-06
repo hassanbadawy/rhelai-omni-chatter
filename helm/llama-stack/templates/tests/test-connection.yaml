@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-test-connection"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "=== Test 1: Llama Stack /v1/models reachable ==="
+          MODELS=$(curl -sf http://llama-stack:{{ .Values.port }}/v1/models)
+          echo "$MODELS"
+
+          echo ""
+          echo "=== Test 2: vLLM model registered ==="
+          if echo "$MODELS" | grep -q '"model_type": *"llm"'; then
+            echo "PASS: at least one LLM model is registered"
+          else
+            echo "FAIL: no LLM models registered. Check vllm.apiToken and vllm.url."
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Test 3: Chat completion ==="
+          curl -sf -X POST http://llama-stack:{{ .Values.port }}/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "{{ .Values.vllm.modelId }}",
+              "messages": [{"role":"user","content":"hi"}],
+              "max_tokens": 5
+            }' || (echo "FAIL: chat completion failed"; exit 1)
+
+          echo ""
+          echo "PASS: all tests passed"

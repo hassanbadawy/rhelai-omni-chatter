@@ -33,6 +33,10 @@ spec:
         checksum/orchestrator-config: {{ include (print $.Template.BasePath "/configmap-orchestrator.yaml") . | sha256sum }}
         checksum/gateway-config: {{ include (print $.Template.BasePath "/configmap-gateway.yaml") . | sha256sum }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       serviceAccountName: guardrails-orchestrator-sa
       containers:
         # -- Main orchestrator container
