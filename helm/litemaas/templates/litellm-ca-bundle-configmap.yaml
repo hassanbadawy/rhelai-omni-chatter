@@ -1,0 +1,10 @@
+{{- if and .Values.litellm.enabled (eq .Values.global.platform "openshift") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "litemaas.litellm.fullname" . }}-ca-bundle
+  labels:
+    {{- include "litemaas.componentLabels" (dict "context" . "component" "ai-proxy") | nindent 4 }}
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"
+{{- end }}

@@ -157,7 +157,7 @@ litellm:
   # Uses the same OAuth provider as the main app (OpenShift SA or external OIDC).
   sso:
     # -- Enable SSO login on LiteLLM UI (replaces username/password login)
-    enabled: false
+    enabled: true
     # -- LiteLLM proxy admin user ID. Set after first SSO login.
     # Find your user ID in the LiteLLM UI after logging in via SSO.
     adminId: ""
@@ -218,6 +218,10 @@ backend:
     adminApiKeys: litemaas-admin-key-2026
     # -- Initial admin users (comma-separated usernames).
     # On OpenShift, auto-detected from the deploying user if empty.
+    # IMPORTANT: The kubeadmin bootstrap user is identified as "kube:admin" (with a colon)
+    # by the OpenShift OAuth server — NOT "kubeadmin". If you install as a different user
+    # but want kubeadmin to log in via SSO, set this explicitly:
+    #   initialAdminUsers: "kube:admin,admin"
     initialAdminUsers: ""
     # -- LiteLLM API key (must match litellm.auth.masterKey, must start with 'sk-')
     litellmApiKey: sk-litemaas-llm-key-2026

@@ -22,6 +22,43 @@ spec:
       serviceAccountName: {{ include "litemaas.serviceAccountName" . }}
       initContainers:
         {{- include "litemaas.initWaitForDatabase" (dict "context" . "secretName" (include "litemaas.litellm.secretName" .) "secretKey" "database-url") | nindent 8 }}
+        {{- if eq .Values.global.platform "openshift" }}
+        - name: build-ca-bundle
+          image: "{{ .Values.litellm.image.repository }}:{{ .Values.litellm.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for f in /etc/pki/tls/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem; do
+                if [ -f "$f" ]; then
+                  cp "$f" /combined/ca-bundle.crt
+                  echo "Seeded combined CA from $f"
+                  break
+                fi
+              done
+              if [ -f /ocp/service-ca.crt ]; then
+                cat /ocp/service-ca.crt >> /combined/ca-bundle.crt
+                echo "Appended OpenShift service-ca.crt"
+              else
+                echo "WARN: /ocp/service-ca.crt not found"
+              fi
+              wc -l /combined/ca-bundle.crt
+          volumeMounts:
+            - name: ocp-ca-bundle
+              mountPath: /ocp
+              readOnly: true
+            - name: combined-ca-bundle
+              mountPath: /combined
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+        {{- end }}
       containers:
         - name: litellm
           image: "{{ .Values.litellm.image.repository }}:{{ .Values.litellm.image.tag }}"
@@ -52,6 +89,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "litemaas.litellm.secretName" . }}
                   key: ui-password
+            {{- if eq .Values.global.platform "openshift" }}
+            # Trust OpenShift service-ca for in-cluster HTTPS (e.g. KServe predictors on :8443)
+            - name: SSL_CERT_FILE
+              value: /etc/litellm/ca/ca-bundle.crt
+            - name: REQUESTS_CA_BUNDLE
+              value: /etc/litellm/ca/ca-bundle.crt
+            {{- end }}
             # Application Configuration
             - name: LITELLM_MODE
               value: "PRODUCTION"
@@ -95,6 +139,12 @@ spec:
               value: {{ .Values.litellm.sso.adminId | quote }}
             {{- end }}
             {{- end }}
+          {{- if eq .Values.global.platform "openshift" }}
+          volumeMounts:
+            - name: combined-ca-bundle
+              mountPath: /etc/litellm/ca
+              readOnly: true
+          {{- end }}
           resources:
             {{- toYaml .Values.litellm.resources | nindent 12 }}
           livenessProbe:
@@ -113,4 +163,12 @@ spec:
             periodSeconds: {{ .Values.litellm.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.litellm.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.litellm.readinessProbe.failureThreshold }}
+      {{- if eq .Values.global.platform "openshift" }}
+      volumes:
+        - name: ocp-ca-bundle
+          configMap:
+            name: {{ include "litemaas.litellm.fullname" . }}-ca-bundle
+        - name: combined-ca-bundle
+          emptyDir: {}
+      {{- end }}
 {{- end }}

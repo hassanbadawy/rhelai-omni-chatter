@@ -6,6 +6,8 @@ metadata:
     {{- include "litemaas.componentLabels" (dict "context" . "component" "api") | nindent 4 }}
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "litemaas.componentSelectorLabels" (dict "context" . "component" "api") | nindent 6 }}
@@ -21,6 +23,32 @@ spec:
       serviceAccountName: {{ include "litemaas.serviceAccountName" . }}
       initContainers:
         {{- include "litemaas.initWaitForDatabase" (dict "context" . "secretName" (include "litemaas.backend.secretName" .) "secretKey" "database-url") | nindent 8 }}
+        - name: patch-oauth-service
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          {{- if eq .Values.global.platform "openshift" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          {{- end }}
+          command:
+            - sh
+            - -c
+            - |
+              cp -r /app/backend/dist/services/. /patched-services/
+              sed -i 's/sub: userResponse\.metadata\.uid,/sub: userResponse.metadata.uid || userResponse.metadata.name,/' \
+                /patched-services/oauth.service.js
+          volumeMounts:
+            - name: patched-services
+              mountPath: /patched-services
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
@@ -100,6 +128,8 @@ spec:
                   name: {{ include "litemaas.backend.secretName" . }}
                   key: litellm-database-url
           volumeMounts:
+            - name: patched-services
+              mountPath: /app/backend/dist/services
             - name: backup-storage
               mountPath: {{ .Values.backend.backup.storagePath }}
           resources:
@@ -121,6 +151,8 @@ spec:
             timeoutSeconds: {{ .Values.backend.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.backend.readinessProbe.failureThreshold }}
       volumes:
+        - name: patched-services
+          emptyDir: {}
         - name: backup-storage
           persistentVolumeClaim:
             claimName: {{ include "litemaas.backend.fullname" . }}-backup
