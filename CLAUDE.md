@@ -14,18 +14,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Supporting services: Langflow, n8n, PostgreSQL, PostgREST, Swagger UI, Dashy, MinIO.
 
-## Wiki / Persistent Knowledge
+## Local wiki discipline (Karpathy LLM-wiki pattern)
 
-The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before working on the UI.** It contains decisions and pitfalls that are not obvious from the code:
+Reference: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
 
-- [`llama-stack-ui/docs/decisions.md`](llama-stack-ui/docs/decisions.md) — *why* key architectural choices were made (Chat Completions vs Responses API, client-side history, context probing, etc.)
-- [`llama-stack-ui/docs/entanglements.md`](llama-stack-ui/docs/entanglements.md) — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
-- [`llama-stack-ui/docs/pitfalls.md`](llama-stack-ui/docs/pitfalls.md) — pitfall log with root cause and fix for every non-obvious bug hit so far
-- [`llama-stack-ui/docs/llama-stack-api-improvements.md`](llama-stack-ui/docs/llama-stack-api-improvements.md) — future improvement opportunities across the Llama Stack API
-- [`llama-stack-ui/docs/model-benchmarks.md`](llama-stack-ui/docs/model-benchmarks.md) — measured latency/throughput per model with per-use-case recommendations (voice agent, chat, RAG, agent/tool-using)
-- [`llama-stack-ui/docs/future-work.md`](llama-stack-ui/docs/future-work.md) — ideas explored but not implemented (GitOps via ArgoCD, fresh-cluster bootstrap, llm-d distributed inference)
+**The wiki at [`wiki/`](wiki/) is the persistent memory of this project.** It is append-mostly, cross-referenced markdown that accumulates findings across sessions. Treat it as the source of truth, not a side artefact.
 
-**Wiki rule:** After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `docs/` page before closing.
+### Read order — always wiki first
+
+Before answering any question or writing any code, follow this order:
+
+1. **[`wiki/README.md`](wiki/README.md)** → orient. Catalog of every wiki page with one-line hooks.
+2. **[`wiki/architecture.md`](wiki/architecture.md)** → layered design (UI → Llama Stack → vLLM/Guardrails/Milvus); the two independent paths (inference vs safety).
+3. **[`wiki/components.md`](wiki/components.md)** → per-component rationale, current cluster URLs, model choices, helm chart status, license notes.
+4. **[`wiki/findings.md`](wiki/findings.md)** → empirical results, dated, in chronological order. Many "obvious" answers are already here with a date and a why.
+5. **[`wiki/runbook.md`](wiki/runbook.md)** → operational recipes (deploy guardrails, register a model, debug TLS, file a release).
+6. **[`wiki/decisions.md`](wiki/decisions.md)** → architectural decisions with rationale (Chat Completions vs Responses API, client-side history, context probing).
+7. **[`wiki/pitfalls.md`](wiki/pitfalls.md)** → pitfall log with root cause and fix for every non-obvious bug hit so far.
+8. **[`wiki/log.md`](wiki/log.md)** → append-only chronological record of every wiki operation.
+9. Topic pages: [`wiki/entanglements.md`](wiki/entanglements.md), [`wiki/llama-stack-api-improvements.md`](wiki/llama-stack-api-improvements.md), [`wiki/model-benchmarks.md`](wiki/model-benchmarks.md), [`wiki/guardrails-redteam-report.md`](wiki/guardrails-redteam-report.md), [`wiki/future-work.md`](wiki/future-work.md).
+10. Reference handbooks: [`wiki/handbooks/llamastack-handbook.md`](wiki/handbooks/llamastack-handbook.md), [`wiki/handbooks/flet-handbook.md`](wiki/handbooks/flet-handbook.md).
+
+Only fall back to reading raw source (helm values, manifests, Streamlit code) if the wiki does not have the answer. The wiki is compiled, dated, and consistent; raw files may have stale comments.
+
+### Write order — every non-trivial finding must be persisted
+
+When you discover, decide, fix, or measure anything that a future Claude session would need to know, you **must** update the wiki before considering the task done. The pattern:
+
+1. **Pick the right page.** Empirical result with a date → `findings.md`. New runtime / model component or rationale change → `components.md`. New operational recipe → `runbook.md`. Architectural decision → `decisions.md`. New bug with a root cause and fix → `pitfalls.md`. New topic that doesn't fit → create a new page under `wiki/`.
+2. **Update the page in place** — keep dated entries, do not silently rewrite history. New entries go at the top (or in the chronological position called for by the page convention).
+3. **Append an entry to [`wiki/log.md`](wiki/log.md)** describing what was ingested, which pages were updated, the source, and the key facts. Use the existing log format (date header, **Operation**, **Pages updated**, **Source**, **Cross-refs**, **claude-mem** ID if applicable). The log is append-only; never edit prior entries.
+4. **Cross-link.** If the new content references another page, link to it (`pitfalls.md` ↔ `decisions.md` ↔ `components.md` etc.). The graph matters as much as the nodes.
+
+### Karpathy-style rules to follow
+
+- **Persist, do not answer in place.** When a session uncovers a fact, the right move is to write it into the wiki first, then answer the user from the wiki. The wiki is what survives compaction; the chat does not.
+- **Date everything.** Every finding gets the day it was observed. Stale claims are obvious only if they're dated.
+- **One page per topic, additively edited.** Don't create `findings_v2.md`. Don't fork a page when you can append a dated entry.
+- **Quote the source.** Cluster URL, file path, error message verbatim, command output, exact YAML stanza. Future Claude needs the exact string to grep for.
+- **Record failure as well as success.** "We tried X and it failed because Y" is among the highest-value content. The Gemma 3n empty-output finding and the `remote::passthrough`-vs-IBM-detectors mismatch are canonical examples — they prevent the same dead end being walked again.
+- **Cross-link aggressively.** A finding without a link to the related component or runbook entry is half-finished.
+- **No silent rewrites.** If a prior wiki entry turns out to be wrong, *append a correction with a date* and link to the prior entry; do not edit the prior entry to make it look right.
+- **The log is the audit trail.** Anyone reading [`wiki/log.md`](wiki/log.md) top-to-bottom should be able to reconstruct the project's evolution.
+
+### Sources and lint
+
+- Raw research artefacts (web fetches, vendor docs, transcripts) live in [`wiki/sources/`](wiki/sources/) with required frontmatter (`fetched`, `url`, `fetcher`, `sha256`). See [`wiki/SOURCES.md`](wiki/SOURCES.md) for the contract. Sources are immutable — corrections go in sibling `*.notes.md` files.
+- Run `python3 scripts/wiki_lint.py` to check for broken internal links, orphan pages, missing source frontmatter, and `log.md` date monotonicity. Run before every commit that touches `wiki/`.
 
 ## Repository Structure
 
@@ -62,12 +97,29 @@ The `llama-stack-ui/docs/` directory is a living wiki. **Always read it before w
 │   ├── tests/
 │   │   ├── test-env.sh       # Configurable endpoints for tests
 │   │   └── test-guardrails.sh # 18 e2e guardrails test scenarios
-│   ├── config.yaml           # Runtime config (endpoint, model, shields, etc.)
-│   └── docs/                 # Living wiki — READ BEFORE WORKING ON UI
-│       ├── decisions.md      # Architectural decisions with rationale
-│       ├── entanglements.md  # Cross-file dependencies and dead code
-│       ├── pitfalls.md       # Bug log with root causes and fixes
-│       └── llama-stack-api-improvements.md  # Future improvement ideas
+│   └── config.yaml           # Runtime config (endpoint, model, shields, etc.)
+├── wiki/                     # Living wiki — READ BEFORE ANSWERING (Karpathy llm-wiki pattern)
+│   ├── README.md             # Index — orient here first
+│   ├── architecture.md       # Layered design, two independent paths
+│   ├── components.md         # Per-component rationale, URLs, models
+│   ├── findings.md           # Dated empirical results
+│   ├── runbook.md            # Operational recipes
+│   ├── decisions.md          # Architectural decisions with rationale
+│   ├── pitfalls.md           # Bug log with root causes and fixes
+│   ├── entanglements.md      # Cross-file dependencies and dead code
+│   ├── llama-stack-api-improvements.md  # Future improvement ideas
+│   ├── model-benchmarks.md   # Latency/throughput per model + use-case routing
+│   ├── guardrails-redteam-report.md  # Red-team results across the four shields
+│   ├── future-work.md        # Ideas explored but not implemented
+│   ├── log.md                # Append-only changelog of wiki operations
+│   ├── SOURCES.md            # Frontmatter contract for sources/
+│   ├── sources/              # Immutable raw research artefacts
+│   ├── entities/             # Single-concept pages (empty until needed)
+│   └── handbooks/            # Zero-to-hero reference handbooks
+│       ├── flet-handbook.md
+│       └── llamastack-handbook.md
+├── scripts/
+│   └── wiki_lint.py          # Mechanical wiki integrity checks
 ├── .env                      # OpenShift cluster credentials (NEVER commit secrets)
 └── tests/
     └── test-llamastack.sh    # Llama Stack API tests
@@ -541,7 +593,7 @@ OpenShift InferenceServices expose vLLM via kube-rbac-proxy on port 8443 with se
 
 ## Model Selection by Use Case
 
-Measured on the available RHOAI vLLM build with `qwen25-7b-instruct` and `gpt-oss-20b`. Full numbers, methodology, and the benchmark recipe live in [`llama-stack-ui/docs/model-benchmarks.md`](llama-stack-ui/docs/model-benchmarks.md).
+Measured on the available RHOAI vLLM build with `qwen25-7b-instruct` and `gpt-oss-20b`. Full numbers, methodology, and the benchmark recipe live in [`wiki/model-benchmarks.md`](wiki/model-benchmarks.md).
 
 | Use case | Recommended | Why |
 |----------|-------------|-----|

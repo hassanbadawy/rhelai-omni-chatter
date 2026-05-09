@@ -52,17 +52,17 @@ No test suite exists in this repository.
 - Multi-language UI support (English, Arabic, French, Spanish, German, Chinese, Japanese, Korean, Portuguese, Russian, Turkish, Hindi)
 - Error display via `st.error()` with try/except patterns
 - Python `logging` module used in `chat.py` and `api.py` — logs appear in the terminal running streamlit
-- All docs are in .md in ./docs dir, read them to understand more:
-  - `docs/decisions.md` — *why* key architectural choices were made (Chat Completions vs Responses API, client-side history, context probing, etc.)
-  - `docs/entanglements.md` — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
-  - `docs/pitfalls.md` — pitfall log with root cause and fix for every non-obvious bug hit so far
-  - `docs/api-improvements.md` — future improvement opportunities across the Llama Stack API
-  - `docs/model-benchmarks.md` — measured latency/throughput per model on the available runtime, with a recommendation table per use case (voice agent, chat, RAG, agent/tool-using)
-  - `docs/future-work.md` — ideas explored but not implemented (GitOps via ArgoCD, fresh-cluster bootstrap script, llm-d distributed inference) with rationale and first-step notes
+- The wiki was moved up to repo root at `../wiki/` as part of the Karpathy llm-wiki adoption (2026-05-09). UI-specific pages still live there:
+  - `../wiki/decisions.md` — *why* key architectural choices were made (Chat Completions vs Responses API, client-side history, context probing, etc.)
+  - `../wiki/entanglements.md` — cross-file dependency map: session state keys, config.yaml consumers, api.py→chat.py contract, dead code inventory
+  - `../wiki/pitfalls.md` — pitfall log with root cause and fix for every non-obvious bug hit so far
+  - `../wiki/llama-stack-api-improvements.md` — future improvement opportunities across the Llama Stack API
+  - `../wiki/model-benchmarks.md` — measured latency/throughput per model on the available runtime, with a recommendation table per use case (voice agent, chat, RAG, agent/tool-using)
+  - `../wiki/future-work.md` — ideas explored but not implemented (GitOps via ArgoCD, fresh-cluster bootstrap script, llm-d distributed inference) with rationale and first-step notes
 
 ## Wiki Rule
 
-After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `docs/` page before closing. Good findings don't disappear into chat history.
+After any session that discovers a new pitfall, changes an architectural decision, or adds/removes a cross-file dependency — update the relevant `../wiki/` page AND append an entry to `../wiki/log.md` before closing. Good findings don't disappear into chat history. See the root [`CLAUDE.md`](../CLAUDE.md) "Local wiki discipline" section for the full Karpathy-style read/write protocol.
 
 ## Known Pitfalls
 
