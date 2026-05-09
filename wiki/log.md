@@ -6,6 +6,23 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-05-09 — Wiki tooling ecosystem survey + 3-phase roadmap
+
+- **Operation:** add finding + add roadmap section
+- **Pages updated:**
+  - [`findings.md`](findings.md) — new dated entry "Wiki tooling ecosystem survey (Karpathy pattern, 2026)"
+  - [`future-work.md`](future-work.md) — new section "Wiki tooling roadmap (Karpathy llm-wiki ecosystem)" with three phases
+- **Source:** WebSearch + WebFetch across the active 2026 ecosystem of Karpathy-pattern wiki plugins, Obsidian/Logseq MCP servers, and markdown+shadow-vector hybrids. No single canonical source; consolidated links in `findings.md`.
+- **Cross-refs:** [`findings.md`](findings.md) ↔ [`future-work.md`](future-work.md) ↔ [`../helm/milvus/`](../helm/milvus/) (memsearch dogfooding angle).
+- **Key facts recorded:**
+  - At least 5 active Claude Code plugins/skills implement Karpathy's pattern: `kfchou/wiki-skills`, `Astro-Han/karpathy-llm-wiki`, `ussumant/llm-wiki-compiler`, `nvk/llm-wiki`, `praneybehl-llm-wiki`. Most feature-rich is `llm-wiki-compiler` (coverage tags, time-decay warnings, `/wiki-visualize`).
+  - `zilliztech/memsearch` is a markdown+Milvus shadow-index pattern — markdown source of truth, Milvus rebuildable cache, hybrid BM25+dense+RRF. Strong fit for this project because we already deploy Milvus via [`helm/milvus/`](../helm/milvus/) — can dogfood the customer-facing vector store.
+  - Obsidian-shaped MCP servers (`jacksteamdev/obsidian-mcp-tools`, `aaronsb/obsidian-semantic-mcp`) read plain markdown directories, no Obsidian app required. Defer until wiki crosses ~50 pages.
+  - Managed memory services (Mem0, Zep, Letta, Cognee, Cloudflare Agent Memory) are explicitly skipped — they pull the wiki off git, forfeiting auditability and PR-reviewability.
+- **Recommendation captured in `future-work.md`:** Phase 1 (`llm-wiki-compiler` skill) is high-value/low-cost — install. Phase 2 (`memsearch` against existing Milvus) is medium-value/medium-cost — defer until wiki grows or a Milvus debugging need surfaces. Phase 3 (Obsidian MCP) is overbuilt for current corpus size.
+
+---
+
 ## 2026-05-09 — Bootstrap the wiki
 
 - **Operation:** create wiki root, migrate existing docs

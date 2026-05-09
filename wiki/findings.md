@@ -6,6 +6,30 @@ When a finding is later overturned, **append a correction with a new date** and 
 
 ---
 
+## 2026-05-09 — Wiki tooling ecosystem survey (Karpathy pattern, 2026)
+
+The Karpathy llm-wiki gist (April 2026) has produced a small but active tooling ecosystem. The cons of the pure-markdown wiki pattern — manual curation cost, no fuzzy match, rot, scale — are mostly addressed by drop-in tools that keep markdown as the source of truth and add mechanical helpers around it. Survey of what exists as of 2026-05-09:
+
+**Claude Code skills/plugins** (closest fit, install over our existing `wiki/`):
+- [`ussumant/llm-wiki-compiler`](https://github.com/ussumant/llm-wiki-compiler) — most feature-rich. Provides `/wiki-compile`, `/wiki-capture`, `/wiki-ingest`, `/wiki-search`, `/wiki-lint`, `/wiki-query`, `/wiki-visualize` (knowledge graph view). Adds **coverage tags** (`[coverage: high -- 15 sources]`) and **time-decay warnings** (⚠️ on claims >18 months) — both directly attack wiki rot.
+- [`kfchou/wiki-skills`](https://github.com/kfchou/wiki-skills) — `/wiki-init`, `/wiki-ingest`, `/wiki-query`, `/wiki-lint`, `/wiki-update`, `/wiki-audit`. The `/wiki-audit` per-page citation verification is the closest analogue to our `sources/` discipline.
+- [`Astro-Han/karpathy-llm-wiki`](https://github.com/Astro-Han/karpathy-llm-wiki) — single SKILL.md, multi-tool compatible (Claude Code, Cursor, Codex).
+- [`nvk/llm-wiki`](https://github.com/nvk/llm-wiki) — multi-agent parallel research (5–10 agents), thesis-driven investigation. Best for *autonomously growing* the wiki rather than hand-curating.
+
+**MCP servers for markdown vaults** (cross-tool access without leaving markdown):
+- [`jacksteamdev/obsidian-mcp-tools`](https://github.com/jacksteamdev/obsidian-mcp-tools) — semantic search + Templater.
+- [`aaronsb/obsidian-semantic-mcp`](https://github.com/aaronsb/obsidian-semantic-mcp) — collapses 21+ tools into 5 AI-optimized ops.
+- [`MarkusPfundstein/mcp-obsidian`](https://github.com/MarkusPfundstein/mcp-obsidian) — canonical Obsidian REST integration.
+
+**Markdown + shadow vector index** (RAG-without-RAG-architecture):
+- [`zilliztech/memsearch`](https://github.com/zilliztech/memsearch) — **strong fit for this project**. Markdown is source of truth; Milvus is a "shadow index" — derived, rebuildable cache. Hybrid BM25 + dense + RRF reranking. SHA-256 dedup. Live file watching. We already deploy Milvus via [`helm/milvus/`](../helm/milvus/) — pointing memsearch at the same Milvus would dogfood the customer-facing vector store. Install: `/plugin marketplace add zilliztech/memsearch`.
+
+**Managed memory services** (Mem0, Zep, Letta, Cognee, Cloudflare Agent Memory) — pull you off git-versioned markdown. Skipping these for this project; auditability and PR-reviewability are non-negotiable.
+
+**Action:** see [`future-work.md`](future-work.md) "Wiki tooling roadmap" for the staged adoption plan. Phase 1 (`llm-wiki-compiler`) is the highest-leverage drop-in; Phase 2 (`memsearch` against existing Milvus) is the dogfooding play.
+
+---
+
 ## 2026-05-09 — Wiki bootstrap
 
 The legacy `llama-stack-ui/docs/` and `docs/` were merged into `wiki/`. `findings.md` is a new page; pre-existing dated observations live in [`pitfalls.md`](pitfalls.md), [`decisions.md`](decisions.md), and [`model-benchmarks.md`](model-benchmarks.md). This page collects new dated observations going forward — performance numbers, integration tests, surprising behaviors, regressions.

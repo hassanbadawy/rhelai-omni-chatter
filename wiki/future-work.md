@@ -57,3 +57,48 @@ GitOps fixes all of those: cluster state lives in git, drift is detected and rev
 **Trade-offs:**
 - Higher operational complexity (gateway, prefill/decode pods, cache routing) for benefits that only show up at scale
 - Different model packaging (ModelCar OCI images vs the current `storageUri: oci://...modelcar-...` pattern may or may not be compatible — verify before committing)
+
+---
+
+## Wiki tooling roadmap (Karpathy llm-wiki ecosystem)
+
+Survey of available tools captured in [`findings.md`](findings.md) "Wiki tooling ecosystem survey (2026-05-09)". Staged adoption plan, ordered by leverage:
+
+### Phase 1: install `llm-wiki-compiler` as a Claude Code skill
+
+[`ussumant/llm-wiki-compiler`](https://github.com/ussumant/llm-wiki-compiler) operates on the existing `wiki/` directory — no migration required.
+
+**What it adds we don't have:**
+- `/wiki-ingest` — interactive single-source addition with auto-`sources/` placement
+- `/wiki-search` — keyword search with backlink awareness
+- `/wiki-visualize` — interactive knowledge-graph browser
+- **Coverage tags** (`[coverage: high -- 15 sources]`) on synthesized sections — flags low-confidence claims for fallback to raw files
+- **Time-decay warnings** (⚠️ on claims >18 months) — directly addresses wiki rot
+
+**First step:** install via the Claude Code plugin marketplace. Run `/wiki-migrate` against `wiki/` to confirm idempotent integration. If `/wiki-migrate` rewrites our existing schema in a way that breaks `scripts/wiki_lint.py`, gate the adoption on a config-only mode.
+
+**Risk:** plugin may have its own opinions about directory layout. Ours is fixed; verify it can adopt the existing structure rather than imposing its own.
+
+### Phase 2: dogfood Milvus by adding `memsearch`
+
+[`zilliztech/memsearch`](https://github.com/zilliztech/memsearch) makes markdown queryable through a "shadow index" pattern: markdown stays the source of truth, Milvus holds the rebuildable vector cache. Hybrid BM25 + dense + RRF reranking; SHA-256 dedup; live file watching auto-reindexes on git pull.
+
+**Why this project specifically:**
+- We already deploy Milvus via [`helm/milvus/`](../helm/milvus/) for the Llama Stack RAG path. Pointing memsearch at the same Milvus instance costs nothing in infra.
+- Lets the wiki test the same vector store we ship to customers — dogfooding.
+- Cross-agent memory: `wiki/` becomes queryable from Codex, OpenClaw, Cursor, not just Claude Code.
+
+**First step:** stand up memsearch pointed at a development Milvus first (not the cluster Milvus). Index `wiki/` end-to-end. Measure: does fuzzy/semantic search over our small corpus actually improve over `rg`? If retrieval quality is comparable, the value is dogfooding + cross-agent access. If it's noticeably better, expand to the cluster Milvus.
+
+**Risk:** memsearch is an MCP server; another moving part. Only worth running if we actually use the cross-agent angle or if the wiki crosses ~50 pages.
+
+### Phase 3 (optional): MCP server for graphical browsing
+
+If/when `wiki/` crosses ~50 pages and grep + `index.md` stop being enough, add an Obsidian MCP server (the markdown is already Obsidian-compatible). Candidates: [`aaronsb/obsidian-semantic-mcp`](https://github.com/aaronsb/obsidian-semantic-mcp) (state-aware ops), [`jacksteamdev/obsidian-mcp-tools`](https://github.com/jacksteamdev/obsidian-mcp-tools) (semantic search + Templater).
+
+**Why not now:** the wiki is small enough that the index-and-grep workflow is fine. Adding Obsidian-shaped tooling now would be infra in search of a problem.
+
+### Explicitly skipped
+
+- **Managed memory services** (Mem0, Zep, Letta, Cognee, Cloudflare Agent Memory) — pull the wiki off git. Auditability and PR-reviewability are the substrate that makes the wiki valuable; SaaS knowledge stores forfeit both.
+- **Multi-agent research plugins** (e.g. [`nvk/llm-wiki`](https://github.com/nvk/llm-wiki) `/wiki:research`, `/wiki:thesis`) — useful for *building* a wiki from scratch; less useful when the wiki already mirrors a working codebase. Revisit if a research-heavy investigation lands (e.g. multi-week customer engagement deep-dive).
