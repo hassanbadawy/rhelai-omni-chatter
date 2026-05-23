@@ -1,5 +1,88 @@
 # Pitfalls Log
 
+---
+
+## 27. aiosqlite `executescript()` auto-commits — migration record must be written separately
+
+**Symptom:** On app restart after a crash mid-migration, `RuntimeError: Migration v002_redesign.sql failed: table materials_v2 already exists`. The migration had already been applied to the DB but was never recorded in `schema_migrations`, so the runner tried again.
+
+**Root cause:** SQLite's `executescript()` issues a `COMMIT` before running, voiding any `BEGIN` issued beforehand. The v002 migration ran and committed, but the `INSERT INTO schema_migrations` that follows in Python was never reached (crash or exception). On next launch the runner sees v002 as pending and tries again — `materials_v2` already exists.
+
+**Fix (two-part):**
+1. Remove the `BEGIN;` call before `executescript()` — it's a no-op and misleading.
+2. Make the migration SQL idempotent: use `CREATE TABLE IF NOT EXISTS materials_v2` instead of `CREATE TABLE materials_v2`. This makes the migration safe to re-run.
+
+**Files:** [`services/storage.py`](../student-assistant/services/storage.py) lines 181-188, [`migrations/v002_redesign.sql`](../student-assistant/migrations/v002_redesign.sql) line 20.
+
+---
+
+## 26. `FloatingActionButton` in Flet 0.85.1 does not accept `text=`
+
+**Symptom:** `TypeError: FloatingActionButton.__init__() got an unexpected keyword argument 'text'` on every route that shows an FAB.
+
+**Root cause:** Flet 0.85.1 removed the `text` parameter from `FloatingActionButton`. There is no labelled FAB equivalent (no `ExtendedFloatingActionButton`). Use `tooltip=` for hover text and icon-only appearance.
+
+**Fix:** Replace `text="Label"` with `tooltip="Label"` in all FAB declarations.
+
+---
+
+## 25. Flet 0.85.1 breaks student-assistant code written for Flet 0.26
+
+**Symptom:** `student-assistant` starts (HTTP 200) but every browser session crashes with a cascade of `AttributeError` / `TypeError` errors. Each fix reveals the next one.
+
+**Root cause:** The flet package installed by `uv sync` (≥0.80) is a near-complete rewrite. Module-level helpers (`ft.alignment`, `ft.padding`, `ft.margin`, `ft.border`) became plain Python modules whose helpers moved onto the class. Button and FilePicker APIs changed. The session storage API moved one level deeper.
+
+**Complete list of breaking changes (0.26 → 0.85.1) hit in student-assistant:**
+
+| Old (0.26) | New (0.85.1) | Affected files |
+|---|---|---|
+| `page.session.set/get(k, v)` | `page.session.store.set/get(k, v)` | `app.py`, all views |
+| `ft.alignment.center` | `ft.Alignment.CENTER` | `materials_list`, `wiki_tab`, `chat_tab`, `streaming_bubble` |
+| `ft.alignment.center_left/right` | `ft.Alignment.CENTER_LEFT/RIGHT` | `streaming_bubble` |
+| `ft.padding.symmetric(h=, v=)` | `ft.Padding.symmetric(horizontal=, vertical=)` | `wiki_tab`, `chat_tab`, `material_card`, `streaming_bubble` |
+| `ft.padding.only(left=)` | `ft.Padding.only(left=)` | `wiki_tab` |
+| `ft.margin.only(...)` | `ft.Margin.only(...)` | `streaming_bubble` |
+| `ft.border.only(...)` | `ft.Border.only(...)` | `chat_tab` |
+| `ft.border.BorderSide(...)` | `ft.BorderSide(...)` | `chat_tab` |
+| `Button(text="…")` | `Button(content="…")` | `upload_modal`, `materials_list` |
+| `FilePicker(on_result=cb)` | `files = await picker.pick_files(with_data=True)` | `upload_modal` |
+| `page.overlay.append(picker)` | `page.services.append(picker)` | `upload_modal` |
+| `page.dialog = d; d.open = True` | `page.show_dialog(d)` | `upload_modal` |
+| `dialog.open = False; page.update()` | `page.pop_dialog()` | `upload_modal` |
+
+**Additional:** `flet run --web` fails with `ModuleNotFoundError: No module named 'flet_desktop'` when only `flet_web` is installed (the CLI imports desktop unconditionally). Workaround: launch via `python app.py` with `ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8080)` in `_run()`. `ft.app()` itself is deprecated since 0.80 in favour of `ft.run()` but still functions.
+
+**Web-mode file bytes:** In Flet web mode, `FilePickerFile.path` is always `None`. Use `pick_files(with_data=True)` and read `FilePickerFile.bytes` instead of reading the path from disk.
+
+**Fix:** All of the above are applied in `student-assistant/` as of 2026-05-16. Pin `flet>=0.85.1` in `pyproject.toml` once the version is stable enough to lock.
+
+**How to detect again:** `uv run python -c "import flet; print(flet.__version__)"` — if ≥0.80 and code was written for <0.80, expect all of the above to fail on first browser load.
+
+---
+
+## 26. Podman compose needs `host.containers.internal`, not `host.docker.internal`
+
+**Symptom:** `podman compose up -d` starts containers but Llama Stack cannot reach Ollama; requests to `http://host.docker.internal:11434` time out.
+
+**Root cause:** Podman on macOS maps the host as `host.containers.internal`, not `host.docker.internal`. The `docker-compose.yml` in `student-assistant/` originally used the Docker name for `OLLAMA_URL` and `extra_hosts`.
+
+**Fix:** Replace both occurrences in `student-assistant/docker-compose.yml`:
+```yaml
+# Before
+OLLAMA_URL: "http://host.docker.internal:11434"
+extra_hosts:
+  - "host.docker.internal:host-gateway"
+
+# After
+OLLAMA_URL: "http://host.containers.internal:11434"
+extra_hosts:
+  - "host.containers.internal:host-gateway"
+```
+
+Podman 5.7.1 ships with a built-in compose engine (Docker Compose v5.1.0 via `podman compose`). No separate `podman-compose` package needed.
+
+**How to detect again:** Llama Stack logs show `ConnectionRefused` or timeout connecting to port 11434. Confirm with `podman exec student-assistant-llama-stack curl -s http://host.docker.internal:11434` — if it fails and `host.containers.internal` works, this is the issue.
+
 Each entry: symptom, root cause, fix applied, and how to detect it again.
 
 ---

@@ -6,6 +6,43 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-05-23 — student-assistant MVP1 redesign: question bank pipeline
+
+- **Operation:** add findings + add pitfalls
+- **Pages updated:**
+  - [`findings.md`](findings.md) — new entry "student-assistant MVP1 redesigned: question bank pipeline, no RAG"
+  - [`pitfalls.md`](pitfalls.md) — entries #26 (`FloatingActionButton.text` removed in Flet 0.85.1) and #27 (`aiosqlite.executescript` auto-commit breaks migration recording)
+- **Source:** Implementation session — complete rewrite of `student-assistant/` from wiki+RAG to question bank architecture.
+- **Cross-refs:** [`findings.md`](findings.md) ↔ [`pitfalls.md`](pitfalls.md) ↔ [`../student-assistant/`](../student-assistant/)
+- **Key facts recorded:**
+  - No RAG, no chat. LlamaStack replaced by generic OpenAI-compatible `AIClient`.
+  - New domain: Student → Grade → Material → MaterialFile → QuestionBank → TestSession.
+  - Migration v002 idempotent: `CREATE TABLE IF NOT EXISTS materials_v2`.
+  - `FloatingActionButton` in Flet 0.85.1 takes no `text=`; use `tooltip=`.
+  - `executescript()` auto-commits — never wrap with `BEGIN;`; always record migration after.
+  - App starts clean at `http://localhost:8080` via `uv run python app.py`.
+
+---
+
+## 2026-05-16 — student-assistant first local run; Flet 0.85.1 and Podman pitfalls
+
+- **Operation:** add pitfalls + add finding
+- **Pages updated:**
+  - [`pitfalls.md`](pitfalls.md) — entries #25 (Flet 0.85.1 breaking API changes, 13-item table) and #26 (Podman `host.containers.internal`)
+  - [`findings.md`](findings.md) — new dated entry "student-assistant first local run; Flet 0.85.1 compatibility fixes applied"
+- **Source:** Live debugging session — iterated on browser session crash traces from `student-assistant/` running under Flet 0.85.1.
+- **Cross-refs:** [`pitfalls.md`](pitfalls.md) ↔ [`findings.md`](findings.md) ↔ [`student-assistant/`](../student-assistant/) ↔ [`wiki/handbooks/flet-handbook.md`](handbooks/flet-handbook.md)
+- **Key facts recorded:**
+  - Flet 0.85.1 (installed by `uv sync`) breaks code written for 0.26 in 13 distinct ways — all fixed in `student-assistant/` as of this date.
+  - `flet run --web` crashes with `ModuleNotFoundError: No module named 'flet_desktop'` when only `flet_web` is installed. Use `python app.py` with `ft.app(..., view=ft.AppView.WEB_BROWSER, port=8080)`.
+  - `FilePickerFile.path` is always `None` in web mode; must use `pick_files(with_data=True)` and read `.bytes`.
+  - `page.session.store` (not `page.session`) is the KV store in 0.85.1. `page.show_dialog()` / `page.pop_dialog()` replace the `page.dialog` assignment pattern.
+  - Podman 5.7.1 ships built-in compose (Docker Compose v5.1.0). `host.docker.internal` → `host.containers.internal` in compose files.
+  - `.env` must be copied from `.env.example` before first run.
+  - Sandbox cluster `ocp.9xgvv.sandbox3434.opentlc.com` DNS expired — needs replacement endpoint.
+
+---
+
 ## 2026-05-09 — Wiki tooling ecosystem survey + 3-phase roadmap
 
 - **Operation:** add finding + add roadmap section

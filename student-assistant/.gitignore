@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+*.egg-info/
+build/
+dist/
+
+# Local app data — when STORAGE_ROOT/SQLITE_PATH point inside the repo
+data/
+storage/
+*.sqlite3
+*.sqlite3-journal
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store

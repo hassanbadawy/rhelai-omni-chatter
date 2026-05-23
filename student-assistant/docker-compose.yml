@@ -1,0 +1,48 @@
+# MVP1 dependencies — only Llama Stack + Docling + Ollama.
+# Milvus is added in MVP2 (chunk + embed RAG layer).
+# Postgres is added in v1.5 (multi-instance scale-out).
+#
+# Bring up: docker compose up -d
+# Tear down: docker compose down -v
+
+version: "3.9"
+
+services:
+  llama-stack:
+    image: docker.io/llamastack/distribution-starter:latest
+    container_name: student-assistant-llama-stack
+    ports:
+      - "8321:8321"
+    environment:
+      INFERENCE_MODEL: "${LLM_MODEL:-ollama/qwen2.5:7b-instruct}"
+      OLLAMA_URL: "http://host.containers.internal:11434"
+    volumes:
+      - llamastack-data:/root/.llama
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+    restart: unless-stopped
+
+  docling:
+    image: ghcr.io/docling-project/docling-serve:latest
+    container_name: student-assistant-docling
+    ports:
+      - "5001:5001"
+    environment:
+      UVICORN_WORKERS: "2"
+      WITH_UI: "True"
+    restart: unless-stopped
+
+  ollama:
+    # Optional. Skip if you point LLM_MODEL at a hosted endpoint.
+    # First-time use: `ollama pull qwen2.5:7b-instruct`
+    image: ollama/ollama:latest
+    container_name: student-assistant-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  llamastack-data:
+  ollama-data:

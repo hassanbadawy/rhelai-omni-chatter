@@ -74,6 +74,33 @@ See [`guardrails-redteam-report.md`](guardrails-redteam-report.md) "Attack 7" an
 
 ---
 
+## 2026-05-23 — student-assistant MVP1 redesigned: question bank pipeline, no RAG
+
+Full redesign of `student-assistant/` from a wiki+RAG chat app into a question bank + test runner. The app now supports multiple students and a Student → Grade → Material → File hierarchy. Key facts:
+
+- **No RAG, no chat.** The LlamaStack dependency is gone. Any OpenAI-compatible endpoint (vLLM, Ollama, OpenRouter, LMStudio, MaaS) is configured in the Settings UI and stored in the `app_settings` SQLite table — no restart needed.
+- **Pipeline:** Upload → Docling (MD) → LLM classify (`chapter_data` | `exercise_sheet`) → LLM extract questions → `question_bank` table.
+- **Question types:** `mcq`, `text_qna`, `true_or_false`, `image_qna`, `table_comparison`. Images extracted from Docling base64 inline refs, saved to disk, path stored in `image_path`.
+- **Test runner:** one-question-at-a-time quiz with auto-scoring (`student_answer.strip().lower() == answer.strip().lower()`).
+- **Migration:** `v002_redesign.sql` — drops `chat_messages`/`chat_sessions`, rebuilds `materials` with `grade_id`, adds `grades`, `material_files`, `question_bank`, `test_sessions`, `test_answers`, `app_settings`. Uses `CREATE TABLE IF NOT EXISTS materials_v2` (idempotent).
+- **Flet pitfalls found:** `FloatingActionButton` does not accept `text=` in 0.85.1 (use `tooltip=`); `aiosqlite.executescript()` auto-commits before running (see [`pitfalls.md` #27](pitfalls.md)).
+- App serves at `http://localhost:8080` — run with `uv run python app.py`.
+
+---
+
+## 2026-05-16 — student-assistant first local run; Flet 0.85.1 compatibility fixes applied
+
+The student-assistant MVP1 app was started locally for the first time using `podman compose up -d` + `uv run python app.py`. The app was written against Flet 0.26 but `uv sync` installs 0.85.1, which has ~13 breaking API changes. All were found and fixed by iterating on browser session crash traces. The app now serves cleanly at `http://localhost:8080` with zero session errors.
+
+Key operational notes:
+- `.env` must be created from `.env.example` before first run — the app raises `RuntimeError: Missing required environment variable(s)` without it.
+- `flet run --web` CLI path is broken when only `flet_web` is installed (imports `flet_desktop` unconditionally). Correct launch: `python app.py` with `view=ft.AppView.WEB_BROWSER` in `_run()`.
+- Sandbox cluster `ocp.9xgvv.sandbox3434.opentlc.com` DNS no longer resolves — expired. `.env` needs updating to a live endpoint before upload/chat can be tested end-to-end.
+
+See [`pitfalls.md` #25](pitfalls.md) for the complete Flet API change table and [`pitfalls.md` #26](pitfalls.md) for the Podman `host.containers.internal` fix.
+
+---
+
 ## How to add an entry
 
 ```markdown
