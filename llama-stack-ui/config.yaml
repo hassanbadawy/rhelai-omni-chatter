@@ -1,7 +1,7 @@
-endpoint: https://llama-stack-user1-canopy.apps.ocp.9xgvv.sandbox3434.opentlc.com
-user_id: hbadawy
-model: vllm/qwen25-vl-7b-instruct
-embedding_model: granite-embedding-125m
+endpoint: ""
+user_id: ""
+model: ""
+embedding_model: ""
 embedding_dimension: 768
 vector_io_provider: milvus
 safety_enabled: false

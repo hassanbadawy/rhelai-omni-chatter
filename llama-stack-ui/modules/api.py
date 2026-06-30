@@ -266,7 +266,7 @@ class LlamaStackClient:
             f"{self.base_url}/v1/files",
             files={"file": (file_name, file_content)},
             data={"purpose": "assistants"},
-            timeout=60,
+            timeout=300,
         )
         resp.raise_for_status()
         return resp.json()
@@ -286,7 +286,7 @@ class LlamaStackClient:
         resp = requests.post(
             f"{self.base_url}/v1/vector_stores/{vector_store_id}/files",
             json=payload,
-            timeout=60,
+            timeout=300,
         )
         resp.raise_for_status()
         return resp.json()

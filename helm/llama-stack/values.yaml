@@ -55,9 +55,15 @@ guardrails:
 
 # -- Milvus vector database
 # mode: "inline" (embedded, no external service needed)
-#       "remote" (connect to a standalone Milvus instance)
+#       "remote" (connect to a standalone Milvus instance — required for AutoRAG)
 milvus:
-  mode: "inline"
-  # Remote Milvus settings (only used when mode is "remote")
-  endpoint: "http://milvus.genai-demo.svc:19530"
+  mode: "remote"
+  # Short service name — works when Milvus is installed in the same namespace.
+  # No namespace suffix needed; Kubernetes resolves within the same project.
+  endpoint: "http://milvus:19530"
+  # Leave token empty to rely on secretName/secretKey injection (recommended).
+  # Set token directly only for dev/testing without a secret.
   token: ""
+  # Secret holding the Milvus root password. Set to "" to skip secret injection.
+  secretName: "milvus-secret"
+  secretKey: "root-password"
