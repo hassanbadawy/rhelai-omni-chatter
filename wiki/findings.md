@@ -6,6 +6,43 @@ When a finding is later overturned, **append a correction with a new date** and 
 
 ---
 
+## 2026-07-02 — LlamaStack 0.7.2+rhaiv.0 schema: complete break from 0.3.x/0.6.x
+
+Deployed in RHOAI 3.4 (`rh-dev` distribution). Seven breaking changes vs the 0.3.x/0.6.x schema documented in this wiki and the Helm chart — all discovered via CrashLoopBackOff debugging:
+
+| Change | Old (≤0.6.x) | New (0.7.x) |
+|---|---|---|
+| Top-level key | `image_name: rh` | `distro_name: rh` |
+| Agents API | `apis: [agents, ...]` | `apis: [responses, ...]` |
+| Agents provider | `inline::meta-reference` | `inline::builtin` |
+| Eval | `inline::meta-reference` eval provider | `eval: []` (eval removed from distribution) |
+| Safety | `remote::trusty_fms` provider | `safety: []` (unless using custom guardrails image) |
+| RAG tool | `inline::rag-runtime` | `inline::file-search` |
+| Storage backends | `kvstore: {type: sqlite, db_path: ...}` flat | `storage.backends.kv_default / sql_default` + `persistence: {backend: kv_default}` per provider |
+| Model registry | `models: [...]` flat list | `registered_resources: {models: [...], shields: [], ...}` |
+| `metadata_store` | per-provider `kvstore:` | top-level `metadata_store: {type: sqlite, db_path: ...}` |
+| TLS verify | `tls_verify: "false"` (string OK) | must be unquoted `false` boolean |
+
+**Embedding model_id identity rule:** `vector_stores.default_embedding_model.model_id` is resolved as `{provider_id}/{model_id}` in the registry. The key stored is `{provider_id}/{provider_model_id}`. These must be identical — set `model_id == provider_model_id` for embedding entries.
+
+**LlamaStack has no API key auth:** 0.7.x ignores all Bearer tokens. `LLAMA_STACK_CLIENT_API_KEY: "unused"` is a valid placeholder in the `llama-stack-connection` secret.
+
+**Model ID format in /v1/models response:** The `/v1/models` OpenAI-compat endpoint returns model IDs as `{provider_id}/{provider_model_id}` (e.g. `vllm/granite-3-1-8b-instruct`). The UI must use this prefixed form.
+
+## 2026-07-02 — AutoRAG BFF uses a separate ConfigMap, not LlamaStack's /v1/vector_stores
+
+The RHOAI Gen AI Studio AutoRAG BFF (`/api/v1/aaa/vectorstores`) reads vector store provider data exclusively from the `gen-ai-aa-vector-stores` ConfigMap in the active namespace. It does NOT query LlamaStack's `/v1/vector_stores` endpoint for this data. If the ConfigMap is missing, the "Vector I/O provider" dropdown in AutoRAG is empty. The ConfigMap format was extracted from an embedded sample YAML inside the `/bff` binary.
+
+**BFF endpoint routing:** `/api/v1/aaa/vectorstores` (AutoRAG) ≠ `/api/v1/lsd/vectorstores` (Gen AI Studio playground). They serve different data from different sources.
+
+**BFF namespace resolution:** BFF passes the RHOAI dashboard's active project as `namespace=` on all LSD calls. Switching to the wrong project silently routes to the wrong namespace.
+
+## 2026-07-02 — Cross-namespace DNS from gen-ai-ui BFF requires FQDN
+
+The `gen-ai-ui` container's DNS search path does not include any application namespace (only `rhods-applications.svc.cluster.local` and cluster-local defaults). Short service names like `http://llama-stack-service:8321` return HTTP 000 (connection refused, no DNS resolution). Must use full FQDN: `http://<svc-name>.<namespace>.svc.cluster.local:<port>`. Confirmed by curl from the rhods-dashboard pod.
+
+---
+
 ## 2026-05-09 — Wiki tooling ecosystem survey (Karpathy pattern, 2026)
 
 The Karpathy llm-wiki gist (April 2026) has produced a small but active tooling ecosystem. The cons of the pure-markdown wiki pattern — manual curation cost, no fuzzy match, rot, scale — are mostly addressed by drop-in tools that keep markdown as the source of truth and add mechanical helpers around it. Survey of what exists as of 2026-05-09:

@@ -2,6 +2,188 @@
 
 ---
 
+## 35. LlamaStack 0.7.x — `vector_stores.default_embedding_model.model_id` must equal `provider_model_id`
+
+**Symptom:** `CrashLoopBackOff` with: `Embedding model 'sentence-transformers/granite-embedding-125m' not found. Available: ['sentence-transformers/ibm-granite/granite-embedding-125m-english']`
+
+**Root cause:** In 0.7.x, `vector_stores.default_embedding_model.model_id` is looked up as `{provider_id}/{model_id}` in the model registry. The registered key is `{provider_id}/{provider_model_id}`. When `model_id ≠ provider_model_id`, the lookup fails at startup with the above error.
+
+**Fix:** Set `model_id` in `registered_resources.models[embedding]` to the same value as `provider_model_id`. Both must be the full HuggingFace path (e.g. `ibm-granite/granite-embedding-125m-english`). Also update `vector_stores.default_embedding_model.model_id` to match.
+
+```yaml
+vector_stores:
+  default_embedding_model:
+    provider_id: sentence-transformers
+    model_id: ibm-granite/granite-embedding-125m-english  # must match provider_model_id below
+
+registered_resources:
+  models:
+  - provider_id: sentence-transformers
+    model_id: ibm-granite/granite-embedding-125m-english     # same as provider_model_id
+    provider_model_id: ibm-granite/granite-embedding-125m-english
+    model_type: embedding
+```
+
+**Files:** `helm/llama-stack/templates/llama-stack.yaml`, `helm/llama-stack/values.yaml` (`embedding.providerModelId`).
+
+---
+
+## 34. LlamaStack 0.7.x — `API 'agents' does not exist`
+
+**Symptom:** `CrashLoopBackOff` with: `ValueError: API 'agents' does not exist`
+
+**Root cause:** The `agents` API was replaced by the `responses` API in LlamaStack 0.7.x. The `rh-dev` distribution image bundled with RHOAI 3.4 no longer exports the `agents` router.
+
+**Fix:** Replace `agents` with `responses` in the `apis` list. Replace the `inline::meta-reference` agents provider with the `inline::builtin` responses provider:
+
+```yaml
+apis: [responses, datasetio, files, inference, safety, scoring, tool_runtime, vector_io]
+
+providers:
+  responses:
+  - provider_id: builtin
+    provider_type: inline::builtin
+    config:
+      persistence:
+        agent_state: {backend: kv_default, namespace: agents}
+        responses: {backend: sql_default, table_name: responses}
+```
+
+---
+
+## 33. LlamaStack 0.7.x — `Provider 'inline::meta-reference' not available for Api.eval`
+
+**Symptom:** `CrashLoopBackOff` with: `ValueError: Provider 'inline::meta-reference' not available for Api.eval`
+
+**Root cause:** The `inline::meta-reference` provider for `eval` was removed from the standard `rh-dev` distribution image in 0.7.x.
+
+**Fix:** Set `eval: []` (empty list). Evaluation is now handled by external tools (MLflow, Eval Hub).
+
+---
+
+## 32. LlamaStack 0.7.x — `remote::trusty_fms` not available
+
+**Symptom:** `CrashLoopBackOff` with: `ValueError: Provider 'remote::trusty_fms' not available` or safety-related startup failure.
+
+**Root cause:** The `trusty_fms` safety provider is only available in the custom guardrails image (`quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms`), not in the standard `rh-dev` distribution.
+
+**Fix:** Set `safety: []` (empty list). If guardrails are needed, use the custom image and the guardrails Helm values branch.
+
+---
+
+## 31. LlamaStack 0.7.x — `rag-runtime` provider replaced by `file-search`
+
+**Symptom:** `CrashLoopBackOff` with: provider not found error for `inline::rag-runtime`.
+
+**Root cause:** The `rag-runtime` tool_runtime provider was renamed to `file-search` in 0.7.x.
+
+**Fix:** Replace in `tool_runtime` section:
+```yaml
+# OLD (0.3.x)
+- provider_id: rag-runtime
+  provider_type: inline::rag-runtime
+
+# NEW (0.7.x)
+- provider_id: file-search
+  provider_type: inline::file-search
+```
+
+---
+
+## 30. LlamaStack 0.7.x — `tls_verify: "false"` (string) parsed as file path
+
+**Symptom:** vLLM provider fails TLS; error mentions trying to open `"false"` as a certificate file.
+
+**Root cause:** In 0.7.x, `tls_verify` must be an unquoted YAML boolean (`false`). A quoted string `"false"` is interpreted as a file path by the Pydantic validator.
+
+**Fix:** Use unquoted `false` in the config YAML:
+```yaml
+providers:
+  inference:
+  - provider_id: vllm
+    provider_type: remote::vllm
+    config:
+      tls_verify: false    # NOT "false"
+```
+
+In Helm templates, use `{{ .Values.vllm.tlsVerify }}` where `tlsVerify` is stored as a quoted string in values.yaml but renders unquoted in the config (Helm renders `"false"` → `false` in the YAML output). Verify with `helm template`.
+
+---
+
+## 29. AutoRAG "Failed to load vector I/O providers" — three-layer root cause
+
+**Symptom:** RHOAI Gen AI Studio AutoRAG page shows "Failed to load vector I/O providers. Check that the secret for the provided Llama Stack connection is valid and the API key has not expired."
+
+**Root cause:** Three independent issues can cause this error (check in order):
+
+**Layer 1 — Wrong RHOAI namespace selected.** The BFF passes the dashboard's active project as `namespace=` on all LSD calls. If the user has any project other than the one containing LlamaStack selected in the dashboard (e.g. `cert-manager`, `default`), the BFF searches the wrong namespace and finds no LSD. Fix: switch to the correct namespace in the RHOAI project selector before navigating to Gen AI Studio.
+
+**Layer 2 — Missing `gen-ai-aa-vector-stores` ConfigMap.** The AutoRAG BFF serves the "Vector I/O provider" dropdown from this ConfigMap exclusively — it does NOT fall back to LlamaStack's own `/v1/vector_stores`. If the ConfigMap is absent, the dropdown is empty. Create it in the same namespace as LlamaStack:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-vector-stores
+  namespace: <namespace>
+data:
+  config.yaml: |
+    providers:
+      vector_io:
+        - provider_id: milvus
+          provider_type: remote::milvus
+          config:
+            uri: http://milvus:19530
+            custom_gen_ai:
+              credentials:
+                secretRefs:
+                  - name: milvus-secret
+                    key: root-password
+    registered_resources:
+      vector_stores:
+        - provider_id: milvus
+          vector_store_id: <vs_id_from_cluster>   # get from: oc exec ... curl /v1/vector_stores
+          embedding_model: ibm-granite/granite-embedding-125m-english
+          embedding_dimension: 768
+          vector_store_name: "Milvus (<namespace>)"
+```
+
+The `vector_store_id` is auto-created by LlamaStack on first connection to Milvus. Get it with:
+```bash
+oc exec -n <ns> deploy/<lsd-name> -- curl -s http://localhost:8321/v1/vector_stores | jq -r '.data[0].identifier'
+```
+
+**Layer 3 — Short service name in `llama-stack-connection` secret.** The `gen-ai-ui` BFF container does not have the target namespace in its DNS search path. A short service name like `http://llama-stack-service:8321` results in HTTP 000 (silent DNS failure). Always use FQDN:
+```
+http://<service-name>.<namespace>.svc.cluster.local:8321
+```
+
+**Note:** LlamaStack 0.7.x has no API key authentication. `LLAMA_STACK_CLIENT_API_KEY: "unused"` is a valid placeholder — the server ignores all Bearer tokens.
+
+**Files:** `helm/llama-stack/templates/llama-stack.yaml` (connection secret + gen-ai-aa-vector-stores ConfigMap), `helm/llama-stack/values.yaml` (`autorag.*`).
+
+**Cross-refs:** See also pitfalls #35 (embedding model_id), #34 (agents API removed).
+
+---
+
+## 28. LiteMaaS: `kube:admin` has no `metadata.uid` — `oauth_id` NOT NULL violation on first login
+
+**Symptom:** `{"error":{"code":"VALIDATION_ERROR","message":"Authentication failed"}}` on the OAuth callback. Backend log shows: `null value in column "oauth_id" of relation "users" violates not-null constraint`. OAuth code exchange itself succeeds; the crash happens when inserting the user row.
+
+**Root cause:** OpenShift's `kube:admin` is a virtual user with no real `metadata.uid` (it comes back `null` from the users API). The backend maps `sub: userResponse.metadata.uid` to the `oauth_id` DB column which is `NOT NULL`. First login hits the constraint and aborts; subsequent retries get `unauthorized_client` because the OAuth code was already consumed.
+
+**Fix:** The `patch-oauth-service` initContainer in `helm/litemaas/templates/backend-deployment.yaml` patches the compiled `oauth.service.js` at pod start to use `userResponse.metadata.uid || userResponse.metadata.name` as the `sub` value. For `kube:admin` this resolves to `"kube:admin"` instead of `null`.
+
+**Silent failure risk (fixed 2026-06-29):** The original initContainer script had no `set -e` and no verification — if sed couldn't find the pattern (e.g. after a backend image update), it silently did nothing and the pod started with the unpatched file. The script now runs `set -e`, checks the pattern exists with `grep -q` before patching, and exits 1 if not found — so a broken patch surfaces as a pod `Init:Error` rather than a confusing auth failure at login time.
+
+**How to detect a broken patch:** If the initContainer shows `Init:Error` or `Init:CrashLoopBackOff`, check its logs: `oc logs <pod> -c patch-oauth-service`. The error message will tell you the pattern was not found and which file to update.
+
+**Files:** [`helm/litemaas/templates/backend-deployment.yaml`](../helm/litemaas/templates/backend-deployment.yaml) — `patch-oauth-service` initContainer.
+
+**Cross-refs:** [`decisions.md`](decisions.md) (OpenShift SA OAuth mode), [`components.md`](components.md) (LiteMaaS).
+
+---
+
 ## 27. aiosqlite `executescript()` auto-commits — migration record must be written separately
 
 **Symptom:** On app restart after a crash mid-migration, `RuntimeError: Migration v002_redesign.sql failed: table materials_v2 already exists`. The migration had already been applied to the DB but was never recorded in `schema_migrations`, so the runner tried again.

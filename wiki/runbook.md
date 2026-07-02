@@ -14,6 +14,88 @@ source .env  # OC_USER, OC_PASSWORD, CLUSTER_DOMAIN
 oc login -u $OC_USER -p $OC_PASSWORD https://api.$CLUSTER_DOMAIN:6443 --insecure-skip-tls-verify
 ```
 
+## Deploy LlamaStack for RHOAI AutoRAG (vanilla cluster)
+
+```bash
+# As of 2026-07-02
+# Full sequence for a clean cluster where nothing is pre-installed.
+# All resources go into the same namespace as the RHOAI project selected in the dashboard.
+
+NS=genai
+
+# 0. Prerequisites: Milvus must be deployed first
+helm upgrade --install milvus helm/milvus/ -n $NS
+
+# 1. Deploy LlamaStack (standard mode, no guardrails)
+VLLM_NS=<model-namespace>
+ISVC=<isvc-name>          # e.g. granite-3-1-8b-instruct
+TOKEN=$(oc get secret -n $VLLM_NS default-token-${ISVC}-sa -o jsonpath='{.data.token}' | base64 -d)
+VLLM_URL="https://${ISVC}-predictor.${VLLM_NS}.svc.cluster.local:8443/v1"
+
+helm upgrade --install llama-stack helm/llama-stack/ -n $NS \
+  --set vllm.url="$VLLM_URL" \
+  --set vllm.apiToken="$TOKEN" \
+  --set vllm.modelId="$ISVC" \
+  --set milvus.mode=remote \
+  --set milvus.endpoint="http://milvus:19530" \
+  --set autorag.connectionSecret.enabled=true \
+  --set autorag.connectionSecret.llamaStackUrl="http://llama-stack-service.${NS}.svc.cluster.local:8321"
+
+# 2. Wait for LlamaStack to come up
+oc rollout status deployment -l app=llama-stack -n $NS --timeout=5m
+
+# 3. Get the auto-created Milvus vector store ID
+VSID=$(oc exec -n $NS deploy/llama-stack -- \
+  curl -s http://localhost:8321/v1/vector_stores | jq -r '.data[0].identifier')
+echo "Vector store ID: $VSID"
+
+# 4. Create gen-ai-aa-vector-stores ConfigMap (required by AutoRAG BFF)
+EMBED_MODEL=ibm-granite/granite-embedding-125m-english
+EMBED_DIM=768
+cat <<EOF | oc apply -n $NS -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-vector-stores
+  namespace: $NS
+data:
+  config.yaml: |
+    providers:
+      vector_io:
+        - provider_id: milvus
+          provider_type: remote::milvus
+          config:
+            uri: http://milvus:19530
+            custom_gen_ai:
+              credentials:
+                secretRefs:
+                  - name: milvus-secret
+                    key: root-password
+    registered_resources:
+      vector_stores:
+        - provider_id: milvus
+          vector_store_id: $VSID
+          embedding_model: $EMBED_MODEL
+          embedding_dimension: $EMBED_DIM
+          vector_store_name: "Milvus ($NS)"
+          metadata:
+            description: "Milvus vector store for AutoRAG in $NS namespace"
+EOF
+
+# 5. Upload the fixed pipeline (RHOAIENG-64768)
+# Requires DSPA to be deployed first (Data Science Pipelines Application CR)
+DS_ROUTE=$(oc get route ds-pipeline-dspa -n $NS -o jsonpath='{.spec.host}')
+curl -sk -X POST "https://$DS_ROUTE/apis/v2beta1/pipelines/upload?name=documents-rag-optimization-pipeline" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -F "uploadfile=@pipeline-fix/pipeline.yaml"
+```
+
+**Important FQDN rule:** The `autorag.connectionSecret.llamaStackUrl` MUST be a fully-qualified service name (`http://<svc>.<ns>.svc.cluster.local:<port>`). The gen-ai-ui BFF container does not inherit the target namespace in its DNS search path; short names cause HTTP 000 (silent connection failure). See [`pitfalls.md`](pitfalls.md) #29.
+
+**AutoRAG namespace:** In the RHOAI dashboard, always select the namespace where LlamaStack is deployed before navigating to Gen AI Studio → AutoRAG. The BFF passes the active namespace to all LSD calls.
+
+---
+
 ## Discover services on a fresh cluster
 
 ```bash

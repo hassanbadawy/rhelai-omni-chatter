@@ -6,6 +6,21 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-06-29 — LiteMaaS kube:admin OAuth login fix; helm chart hardened
+
+- **Operation:** debug + fix + add pitfall
+- **Pages updated:**
+  - [`pitfalls.md`](pitfalls.md) — entry #28 (`kube:admin` null `oauth_id` on first login)
+- **Source:** Live cluster debugging session on `cluster-7hb2t.7hb2t.sandbox670.opentlc.com`, namespace `genai`.
+- **Cross-refs:** [`pitfalls.md`](pitfalls.md) ↔ [`helm/litemaas/templates/backend-deployment.yaml`](../helm/litemaas/templates/backend-deployment.yaml)
+- **Key facts recorded:**
+  - `kube:admin` has no `metadata.uid` in OpenShift — the virtual admin user returns `null` from `/apis/user.openshift.io/v1/users/~`.
+  - The `patch-oauth-service` initContainer patches `oauth.service.js` to use `uid || name` as the OAuth subject. It was present in the local chart but had never been deployed (helm release was at revision 1 from June 14; chart updated locally after that).
+  - Original script had no `set -e` and no verification — silent failure if pattern not found. Fixed: added `set -e`, `grep -q` pre-check, and exit 1 on failure so a broken patch surfaces as `Init:Error`.
+  - Fix deployed via `helm upgrade litemaas helm/litemaas/ -n genai --reuse-values` (revision 2).
+
+---
+
 ## 2026-05-23 — student-assistant MVP1 redesign: question bank pipeline
 
 - **Operation:** add findings + add pitfalls

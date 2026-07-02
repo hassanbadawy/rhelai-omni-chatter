@@ -14,7 +14,8 @@ vllm:
   apiToken: "fake"
   tlsVerify: "false"
   maxTokens: "4096"
-  # modelId must match the model identifier exposed by vLLM (e.g. from GET /v1/models)
+  # modelId is registered as a plain short ID — no provider prefix.
+  # Must match the identifier vLLM reports at GET /v1/models WITHOUT the provider prefix.
   modelId: "meta-llama/Llama-3.2-3B-Instruct"
 
 configDir: /opt/app-root/src/.llama/distributions/rh
@@ -31,7 +32,9 @@ resources:
     memory: "12Gi"
 
 embedding:
-  modelId: granite-embedding-125m
+  # providerModelId is the HuggingFace model path used by sentence-transformers.
+  # modelId is derived from providerModelId (they must match in 0.7.x schema)
+  # so that vector_stores.default_embedding_model lookup resolves correctly.
   providerModelId: ibm-granite/granite-embedding-125m-english
   dimension: 768
 
@@ -67,3 +70,26 @@ milvus:
   # Secret holding the Milvus root password. Set to "" to skip secret injection.
   secretName: "milvus-secret"
   secretKey: "root-password"
+
+# -- AutoRAG connection secret and vector store ConfigMap
+# Enables resources that RHOAI Gen AI Studio AutoRAG UI needs to connect to LlamaStack.
+autorag:
+  connectionSecret:
+    enabled: true
+    # Must be a fully-qualified service name (FQDN) — the gen-ai-ui BFF container
+    # does not have the target namespace in its DNS search path, so short service
+    # names fail. Format: http://<svc-name>.<namespace>.svc.cluster.local:<port>
+    llamaStackUrl: "http://llama-stack-service.default.svc.cluster.local:8321"
+
+  # gen-ai-aa-vector-stores ConfigMap — required by the AutoRAG BFF for the
+  # "Vector I/O provider" dropdown. The BFF reads ONLY this ConfigMap; it does
+  # NOT fall back to LlamaStack's /v1/vector_stores endpoint.
+  vectorStores:
+    enabled: true
+    # vector_store_id is auto-created by LlamaStack on first Milvus connection.
+    # After first deploy, retrieve it with:
+    #   oc exec deploy/<lsd-name> -- curl -s http://localhost:8321/v1/vector_stores \
+    #     | jq -r '.data[0].identifier'
+    # Then set this value and re-deploy.
+    milvusVectorStoreId: ""
+    vectorStoreName: "Milvus"

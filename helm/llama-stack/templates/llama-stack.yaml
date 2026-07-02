@@ -8,6 +8,10 @@ metadata:
 data:
   config.yaml: |
 {{- if .Values.guardrails.enabled }}
+    # -----------------------------------------------------------------------
+    # GUARDRAILS MODE — legacy 0.3.x schema, requires custom image
+    # (quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms)
+    # -----------------------------------------------------------------------
     version: '2'
     image_name: vllm
     apis:
@@ -153,7 +157,7 @@ data:
       provider_model_id: {{ .Values.vllm.modelId }}
       model_type: llm
     - provider_id: sentence-transformers
-      model_id: {{ .Values.embedding.modelId }}
+      model_id: {{ .Values.embedding.providerModelId }}
       provider_model_id: {{ .Values.embedding.providerModelId }}
       model_type: embedding
       metadata:
@@ -184,12 +188,15 @@ data:
     server:
       port: {{ .Values.port }}
 {{- else }}
+    # -----------------------------------------------------------------------
+    # STANDARD MODE — LlamaStack 0.7.x schema (rh distribution)
+    # Compatible with RHOAI 3.4+ and AutoRAG (Gen AI Studio)
+    # -----------------------------------------------------------------------
     version: "2"
-    image_name: rh
+    distro_name: rh
     apis:
-    - agents
+    - responses
     - datasetio
-    - eval
     - files
     - inference
     - safety
@@ -200,8 +207,7 @@ data:
       inference:
       - provider_id: sentence-transformers
         provider_type: inline::sentence-transformers
-        config:
-          trust_remote_code: true
+        config: {}
       - provider_id: vllm
         provider_type: remote::vllm
         config:
@@ -215,7 +221,8 @@ data:
         provider_type: remote::milvus
         config:
           uri: {{ .Values.milvus.endpoint }}
-          token: "${env.MILVUS_TOKEN:={{ .Values.milvus.token }}}"
+          token: "${env.MILVUS_TOKEN:=}"
+          consistency_level: Strong
           persistence:
             backend: kv_default
             namespace: "vector_io::milvus"
@@ -227,51 +234,35 @@ data:
             backend: kv_default
             namespace: "vector_io::milvus"
         {{- end }}
-      agents:
-      - provider_id: meta-reference
-        provider_type: inline::meta-reference
+      responses:
+      - provider_id: builtin
+        provider_type: inline::builtin
         config:
           persistence:
             agent_state:
-              backend: default
-              namespace: "agent_state"
+              backend: kv_default
+              namespace: agents
             responses:
-              backend: sql
-              namespace: "agents"
-              table_name: "responses"
-      eval:
-      - provider_id: meta-reference
-        provider_type: inline::meta-reference
-        config:
-          kvstore:
-            backend: default
-            namespace: "eval"
-      safety:
-      - provider_id: llama-guard
-        provider_type: inline::llama-guard
-        config: {}
+              backend: sql_default
+              max_write_queue_size: 10000
+              num_writers: 4
+              table_name: responses
+      eval: []
       files:
       - provider_id: meta-reference-files
         provider_type: inline::localfs
         config:
           metadata_store:
-            backend: sql
-            namespace: "files"
-            table_name: "files_metadata"
+            backend: sql_default
+            table_name: files_metadata
           storage_dir: {{ .Values.configDir }}/files
       datasetio:
       - provider_id: huggingface
         provider_type: remote::huggingface
         config:
           kvstore:
-            backend: default
-            namespace: "huggingface"
-      - provider_id: localfs
-        provider_type: inline::localfs
-        config:
-          kvstore:
-            backend: default
-            namespace: "localfs"
+            backend: kv_default
+            namespace: datasetio::huggingface
       scoring:
       - provider_id: basic
         provider_type: inline::basic
@@ -280,64 +271,62 @@ data:
         provider_type: inline::llm-as-judge
         config: {}
       tool_runtime:
-      - provider_id: rag-runtime
-        provider_type: inline::rag-runtime
+      - provider_id: file-search
+        provider_type: inline::file-search
         config: {}
       - provider_id: model-context-protocol
         provider_type: remote::model-context-protocol
         config: {}
+      safety: []
     metadata_store:
-      backend: default
-      namespace: "metadata"
+      type: sqlite
+      db_path: {{ .Values.configDir }}/inference_store.db
     storage:
       backends:
-        default:
-          type: kv_sqlite
-          db_path: {{ .Values.configDir }}/storage.db
-          namespace: null
         kv_default:
           type: kv_sqlite
-          db_path: {{ .Values.configDir }}/storage.db
-          namespace: null
-        sql:
+          db_path: {{ .Values.configDir }}/kvstore.db
+        sql_default:
           type: sql_sqlite
-          db_path: {{ .Values.configDir }}/sql_storage.db
+          db_path: {{ .Values.configDir }}/sql_store.db
       stores:
-        metadata:
-          backend: default
-          namespace: "llama-stack"
         conversations:
-          backend: sql
-          namespace: "conversations"
-          table_name: "conversations"
+          backend: sql_default
+          table_name: openai_conversations
         inference:
-          backend: sql
-          namespace: "inference"
-          table_name: "inference"
-        prompts:
+          backend: sql_default
+          table_name: inference_store
+        metadata:
           backend: kv_default
-          namespace: "prompts"
-    models:
-    - provider_id: vllm
-      model_id: {{ .Values.vllm.modelId }}
-      provider_model_id: {{ .Values.vllm.modelId }}
-      model_type: llm
-    - provider_id: sentence-transformers
-      model_id: {{ .Values.embedding.modelId }}
-      provider_model_id: {{ .Values.embedding.providerModelId }}
-      model_type: embedding
-      metadata:
-        embedding_dimension: {{ .Values.embedding.dimension }}
-    shields: []
-    vector_dbs: []
-    datasets: []
-    scoring_fns: []
-    benchmarks: []
-    tool_groups:
-    - toolgroup_id: builtin::rag
-      provider_id: rag-runtime
+          namespace: registry
+    vector_stores:
+      default_provider_id: milvus
+      default_embedding_model:
+        provider_id: sentence-transformers
+        model_id: {{ .Values.embedding.providerModelId }}
+    registered_resources:
+      models:
+      - provider_id: sentence-transformers
+        model_id: {{ .Values.embedding.providerModelId }}
+        provider_model_id: {{ .Values.embedding.providerModelId }}
+        model_type: embedding
+        metadata:
+          embedding_dimension: {{ .Values.embedding.dimension }}
+      - provider_id: vllm
+        model_id: {{ .Values.vllm.modelId }}
+        model_type: llm
+        metadata:
+          display_name: {{ .Values.vllm.modelId }}
+      shields: []
+      vector_stores: []
+      datasets: []
+      scoring_fns: []
+      benchmarks: []
+      tool_groups: []
     server:
       port: {{ .Values.port }}
+    telemetry:
+      enabled: false
 {{- end }}
 ---
 apiVersion: llamastack.io/v1alpha1
@@ -428,4 +417,65 @@ spec:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+{{- end }}
+{{- if .Values.autorag.connectionSecret.enabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: llama-stack-connection
+  annotations:
+    openshift.io/display-name: LlamaStack AutoRAG
+  labels:
+    opendatahub.io/dashboard: "true"
+type: Opaque
+stringData:
+  LLAMA_STACK_CLIENT_BASE_URL: {{ .Values.autorag.connectionSecret.llamaStackUrl | quote }}
+  LLAMA_STACK_CLIENT_API_KEY: "unused"
+  OGX_CLIENT_BASE_URL: {{ .Values.autorag.connectionSecret.llamaStackUrl | quote }}
+  OGX_CLIENT_API_KEY: "unused"
+{{- end }}
+{{- if .Values.autorag.vectorStores.enabled }}
+---
+# gen-ai-aa-vector-stores ConfigMap — required by the RHOAI Gen AI Studio AutoRAG BFF.
+# The BFF reads the "Vector I/O provider" dropdown exclusively from this ConfigMap.
+# It does NOT query LlamaStack's /v1/vector_stores endpoint for this data.
+#
+# Step 1: deploy LlamaStack (this chart), wait for it to come up.
+# Step 2: retrieve the auto-created vector_store_id:
+#   oc exec deploy/<lsd-name> -- curl -s http://localhost:8321/v1/vector_stores \
+#     | jq -r '.data[0].identifier'
+# Step 3: set autorag.vectorStores.milvusVectorStoreId and re-deploy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-vector-stores
+  labels:
+    opendatahub.io/dashboard: "true"
+data:
+  config.yaml: |
+    providers:
+      vector_io:
+        - provider_id: milvus
+          provider_type: remote::milvus
+          config:
+            uri: {{ .Values.milvus.endpoint }}
+            custom_gen_ai:
+              credentials:
+                secretRefs:
+                  - name: {{ .Values.milvus.secretName }}
+                    key: {{ .Values.milvus.secretKey | default "root-password" }}
+    registered_resources:
+      vector_stores:
+{{- if .Values.autorag.vectorStores.milvusVectorStoreId }}
+        - provider_id: milvus
+          vector_store_id: {{ .Values.autorag.vectorStores.milvusVectorStoreId | quote }}
+          embedding_model: {{ .Values.embedding.providerModelId }}
+          embedding_dimension: {{ .Values.embedding.dimension }}
+          vector_store_name: {{ .Values.autorag.vectorStores.vectorStoreName | quote }}
+          metadata:
+            description: "Milvus vector store managed by llama-stack Helm chart"
+{{- else }}
+        []
+{{- end }}
 {{- end }}
