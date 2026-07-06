@@ -568,6 +568,27 @@ entries:
     version: 1.0.0
   llama-stack-ui:
   - apiVersion: v2
+    appVersion: 1.0.1
+    created: "2026-07-06T15:09:59.08017+03:00"
+    description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
+      shields, and document management
+    digest: 3cbccd6ab2a08fa4dffc5ba11bd13b5479c61cc5c0c70d06f951bfeb1e0728c9
+    icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
+    keywords:
+    - llama-stack
+    - streamlit
+    - ui
+    - openshift
+    - rag
+    - guardrails
+    maintainers:
+    - name: hassanbadawy
+    name: llama-stack-ui
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-ui-1.0.1/llama-stack-ui-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v2
     appVersion: 1.0.0
     created: "2026-05-06T03:02:48.637766+03:00"
     description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
@@ -760,4 +781,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-06T03:02:48.63618+03:00"
+generated: "2026-07-06T15:09:59.079634+03:00"
