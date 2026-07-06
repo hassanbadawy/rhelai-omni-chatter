@@ -14,6 +14,7 @@ def main():
     pages = {
         "Chat": ("pages/chat.py", "💬"),
         "Documents": ("pages/documents.py", "📄"),
+        "Guardrails": ("pages/guardrails.py", "🛡️"),
         "Settings": ("pages/settings.py", "⚙️"),
     }
 
