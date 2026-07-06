@@ -13,33 +13,6 @@ from modules.config import (
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
-SUMMARY_PROMPT = """Analyze the following documents and extract a structured summary.
-Respond ONLY in {language}. Use this exact format (no extra text):
-
-**Title:** <case title>
-
----
-
-**People:** <names of people involved>
-
----
-
-**Place:** <locations mentioned>
-
----
-
-**Summary:** <2-3 sentence summary>
-
----
-
-**Timeline:**
-- <event 1>
-- <event 2>
-- <event 3>
-
-DOCUMENTS:
-{context}"""
-
 
 def _get_conversations():
     """Get the conversations dict from session state."""
@@ -228,32 +201,6 @@ def chat_page():
         except Exception as e:
             st.error(f"Failed to fetch vector stores: {e}")
 
-        if selected_vector_db:
-            cache_key = f"case_summary_{selected_vector_db}_{language}"
-
-            if cache_key not in st.session_state:
-                with st.spinner("Loading case summary..."):
-                    try:
-                        chunks = client.search_vector_store(
-                            selected_vector_db, "summary of the case", max_num_results=10
-                        )
-                        if chunks:
-                            context = "\n\n".join(chunks)
-                            result = client.chat_completions(
-                                messages=[{"role": "user", "content": SUMMARY_PROMPT.format(context=context, language=language)}],
-                                model=selected_model,
-                                max_tokens=512,
-                            )
-                            summary = result["choices"][0]["message"]["content"]
-                            st.session_state[cache_key] = summary
-                        else:
-                            st.session_state[cache_key] = None
-                    except Exception:
-                        st.session_state[cache_key] = None
-
-            summary = st.session_state.get(cache_key)
-            if summary:
-                st.markdown(summary)
 
     # --- Determine active conversation state ---
     active_key = st.session_state.get("active_chat_key")

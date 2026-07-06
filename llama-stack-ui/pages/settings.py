@@ -260,7 +260,7 @@ def settings_page():
             "max_tokens": max_tokens,
         }
         save_config(new_config)
-        st.success("Settings saved to config.yaml")
+        st.toast("Settings saved successfully", icon="✅")
         st.rerun()
 
 

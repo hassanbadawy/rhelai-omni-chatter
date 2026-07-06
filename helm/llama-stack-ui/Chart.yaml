@@ -2,8 +2,8 @@ apiVersion: v2
 name: llama-stack-ui
 description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety shields, and document management
 type: application
-version: 1.0.0
-appVersion: "1.0.0"
+version: 1.0.1
+appVersion: "1.0.1"
 icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
 keywords:
   - llama-stack
