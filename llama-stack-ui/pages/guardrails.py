@@ -446,7 +446,7 @@ def _run_scenarios(presets, model, progress_placeholder, result_key, multi_shiel
         llm_before = _get_llm(p["prompt"], model)
 
         # shields
-        shields = p.get("shields", [p["shield"]]) if multi_shield else [p.get("shield", p.get("shields",[""])[0])]
+        shields = (p["shields"] if "shields" in p else [p["shield"]]) if multi_shield else [p["shield"] if "shield" in p else p["shields"][0]]
         hits = {}
         any_blocked = False
         for sid in shields:
