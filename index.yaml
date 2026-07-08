@@ -631,6 +631,28 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/llama-stack-ui-1.0.0/llama-stack-ui-1.0.0.tgz
     version: 1.0.0
+  locate-anything:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-07-08T20:41:49.674918+03:00"
+    description: NVIDIA LocateAnything-3B spatial-grounding vision model via NIM container
+      on OpenShift
+    digest: 97da46b24deef6334ecbcd1c4d0613d58caed71172fd54727efa440546d2816a
+    icon: https://www.nvidia.com/content/nvidiaGDC/us/en_US/about-nvidia/corporate-overview/_jcr_content/root/responsivegrid/nv_container/container/nv_image.coreimg.100.630.png/1664473256566/nvidia-logo.png
+    keywords:
+    - nvidia
+    - nim
+    - locate-anything
+    - vision
+    - openshift
+    - gpu
+    maintainers:
+    - name: hassanbadawy
+    name: locate-anything
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/locate-anything-0.1.0/locate-anything-0.1.0.tgz
+    version: 0.1.0
   milvus:
   - apiVersion: v2
     appVersion: "2.4"
@@ -803,4 +825,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-06T12:10:32.21949828Z"
+generated: "2026-07-08T20:41:49.674435+03:00"
