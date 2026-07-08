@@ -1,0 +1,16 @@
+apiVersion: v2
+name: locate-anything
+description: NVIDIA LocateAnything-3B spatial-grounding vision model via NIM container on OpenShift
+type: application
+version: 0.1.0
+appVersion: "latest"
+icon: https://www.nvidia.com/content/nvidiaGDC/us/en_US/about-nvidia/corporate-overview/_jcr_content/root/responsivegrid/nv_container/container/nv_image.coreimg.100.630.png/1664473256566/nvidia-logo.png
+keywords:
+  - nvidia
+  - nim
+  - locate-anything
+  - vision
+  - openshift
+  - gpu
+maintainers:
+  - name: hassanbadawy

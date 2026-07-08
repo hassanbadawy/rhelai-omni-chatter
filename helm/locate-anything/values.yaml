@@ -1,0 +1,56 @@
+# NVIDIA NIM container for LocateAnything-3B
+# Requires an NGC API key: https://catalog.ngc.nvidia.com/
+
+image:
+  repository: nvcr.io/nim/nvidia/locate-anything
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# NGC API key — required to pull and run the NIM container
+# Set via --set ngcApiKey=<your-key>
+ngcApiKey: ""
+
+# Model cache — NIM downloads the model weights at first boot
+# Use a PVC so the cache survives pod restarts
+persistence:
+  enabled: true
+  size: 20Gi
+  storageClass: ""        # leave blank to use cluster default
+  accessMode: ReadWriteOnce
+
+# GPU — LocateAnything-3B requires 1 GPU (A10G / A100 / H100)
+resources:
+  limits:
+    nvidia.com/gpu: "1"
+    memory: 16Gi
+    cpu: "4"
+  requests:
+    nvidia.com/gpu: "1"
+    memory: 12Gi
+    cpu: "2"
+
+# Service
+service:
+  type: ClusterIP
+  port: 8000
+
+# OpenShift Route
+route:
+  enabled: true
+  host: ""                # auto-generated if empty
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# Extra env vars passed to the NIM container
+extraEnv: {}
+#  NIM_LOG_LEVEL: "INFO"
+
+replicaCount: 1
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
