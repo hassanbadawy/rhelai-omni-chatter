@@ -14,7 +14,7 @@ DEFAULTS = {
     "model": os.environ.get("DEFAULT_MODEL", ""),
     "embedding_model": "",
     "vector_io_provider": "",
-    "user_id": "",
+    "user_id": "Hasan",
     "language": "English",
     "system_prompt": "You are a helpful assistant.",
     "temperature": 0.7,
