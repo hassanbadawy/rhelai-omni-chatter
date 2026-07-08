@@ -1,0 +1,252 @@
+[
+  {
+    "question": "What is the status of Models-as-a-Service (MaaS) in Red Hat OpenShift AI 3.4?",
+    "correct_answers": [
+      "Models-as-a-Service (MaaS) is Generally Available in Red Hat OpenShift AI 3.4. It was previously introduced as a Technology Preview feature in version 3.3.",
+      "MaaS is GA in RHOAI 3.4, having graduated from Technology Preview in 3.3."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is AutoRAG and what is its support status in Red Hat OpenShift AI 3.4?",
+    "correct_answers": [
+      "AutoRAG is a Technology Preview feature in RHOAI 3.4 that helps find the best retrieval-augmented generation (RAG) configuration for documents and use cases. It provides a dashboard UI to configure optimization runs, evaluate RAG patterns on a leaderboard, and generate notebooks to run patterns.",
+      "AutoRAG automates RAG optimization. It is available as a Technology Preview in RHOAI 3.4 and is not supported with Red Hat production SLAs."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the maximum number of foundation models and embedding models allowed when starting an AutoRAG experiment?",
+    "correct_answers": [
+      "AutoRAG supports up to 2 foundation models and up to 3 embedding models per experiment. Exceeding these limits causes a SearchSpaceValueError and the experiment fails.",
+      "A maximum of 3 embedding models and 2 generation (foundation) models per AutoRAG run. This is a known limitation (RHOAIENG-59950)."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What version of Llama Stack is included in Red Hat OpenShift AI 3.4 EA2?",
+    "correct_answers": [
+      "Red Hat OpenShift AI 3.4 EA2 includes Open Data Hub Llama Stack version 0.6.0.1+rhai0, which is based on upstream Llama Stack version 0.6.0.",
+      "RHOAI 3.4 EA2 ships Llama Stack 0.6.0.1+rhai0 (upstream 0.6.0)."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What happened to the CodeFlare Operator in Red Hat OpenShift AI 3.4?",
+    "correct_answers": [
+      "The CodeFlare Operator was removed in Red Hat OpenShift AI 3.4.",
+      "CodeFlare Operator was removed as part of the support removals in RHOAI 3.4."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What NeMo Guardrails capabilities were introduced when it became Generally Available in RHOAI 3.4?",
+    "correct_answers": [
+      "NeMo Guardrails became GA in RHOAI 3.4 with these capabilities: a /v1/guardrails/checks endpoint for standalone querying of guardrail policies, full OpenAI compatibility with a new /v1/models/ endpoint, new regex rails for regex-based guardrail logic, support for multiple replicas to improve scalability, out-of-the-box OpenTelemetry support, and automatic redeployment after configuration changes for zero-downtime tuning.",
+      "NeMo Guardrails GA in 3.4 adds: /v1/guardrails/checks endpoint, OpenAI-compatible /v1/models/, regex rails, multi-replica support, OpenTelemetry, and zero-downtime config redeployment."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What machine learning frameworks does the MLServer ServingRuntime for KServe support?",
+    "correct_answers": [
+      "The MLServer ServingRuntime for KServe supports Scikit-learn, XGBoost, LightGBM, and ONNX.",
+      "MLServer KServe runtime supports: Scikit-learn, XGBoost, LightGBM, ONNX."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the workaround for the RHOAIENG-60855 known issue where the Llama Stack Operator produces an invalid Deployment after upgrading from RHOAI 3.3 to 3.4?",
+    "correct_answers": [
+      "Delete the affected Deployment so that the operator recreates it with a valid strategy: oc delete deployment <cr-name> -n <namespace>. Replace <cr-name> with the name of the LlamaStackDistribution custom resource and <namespace> with its namespace. The Llama Stack operator will recreate the deployment and the new pod will work as expected.",
+      "Run: oc delete deployment <cr-name> -n <namespace>. The Llama Stack operator will recreate a valid deployment automatically."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What deployment environments does Red Hat OpenShift AI Self-Managed support?",
+    "correct_answers": [
+      "OpenShift AI Self-Managed can be installed on-premise or in the cloud. Supported environments include: OpenShift Container Platform (self-managed), Red Hat OpenShift Dedicated (with Customer Cloud Subscription for AWS or GCP), Red Hat OpenShift Service on Amazon Web Services (ROSA classic or ROSA HCP), and Microsoft Azure Red Hat OpenShift.",
+      "RHOAI Self-Managed supports: on-premise OpenShift Container Platform, Red Hat OpenShift Dedicated (AWS/GCP), ROSA classic, ROSA HCP, and Azure Red Hat OpenShift."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the MLflow Operator's new status in RHOAI 3.4 and how is it enabled?",
+    "correct_answers": [
+      "Starting with RHOAI 3.4, the MLflow Operator is a managed component in the DataScienceCluster custom resource. It can be enabled by setting managementState to Managed in the DataScienceCluster CR. The deprecated mlflow dashboard feature flag is no longer required.",
+      "MLflow Operator is now a managed DataScienceCluster component in 3.4. Enable it by setting managementState: Managed in the DataScienceCluster CR."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the Conversations API in Llama Stack and what does it enable?",
+    "correct_answers": [
+      "The Conversations API enables multi-turn, context-aware chats by managing message history, tool outputs, and conversation state. Developers can use it to build AI applications with memory, moving beyond simple stateless requests to create persistent, intelligent interactions.",
+      "The Llama Stack Conversations API manages message history and conversation state to enable multi-turn, stateful AI interactions with memory across turns."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "Which components were deprecated in Red Hat OpenShift AI 3.4?",
+    "correct_answers": [
+      "Deprecated in RHOAI 3.4: Ray-based multi-node vLLM template, Training images and ClusterTrainingRuntimes for Kubeflow Training Operator v1, SQLite as a production metadata store for Llama Stack, the deprecated annotation format for Connection Secrets, Kubeflow Training Operator v1, TrustyAI service CRD v1alpha1, KServe Serverless deployment mode, Model Registry API v1alpha1, Multi-model serving platform (ModelMesh), Accelerator Profiles and legacy Container Size selector, OpenVINO Model Server (OVMS) plugin, OpenShift AI dashboard user management from OdhDashboardConfig (moved to Auth resource), and deprecated cluster configuration parameters.",
+      "Key RHOAI 3.4 deprecations include: Ray-based multi-node vLLM template, KFTOv1 training images, SQLite as production Llama Stack metadata store, KServe Serverless mode, ModelMesh, OVMS plugin, Accelerator Profiles, and Model Registry API v1alpha1."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the OCI-compliant storage layer feature for model registry in RHOAI 3.4?",
+    "correct_answers": [
+      "The OCI-compliant storage layer for model registry allows users to register a model from an S3-compatible source or URI, transform it into an OCI ModelCar image, and store it in an OCI registry using the OpenShift AI dashboard. The ModelCar target format enables fast deployment with KServe. The model transfer job runs as a background Kubernetes Job that can be monitored from the dashboard.",
+      "RHOAI 3.4 adds OCI model registry support: register from S3/URL, auto-convert to ModelCar OCI image for KServe, monitor the background Kubernetes job from the dashboard, retry or delete failed jobs."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the EvalHub client SDK and what are its key capabilities in RHOAI 3.4?",
+    "correct_answers": [
+      "EvalHub client SDK is a Technology Preview in RHOAI 3.4. It provides a Python client library (eval-hub-sdk) and CLI (evalhub command) for integrating evaluation workflows into development environments. Key capabilities include: job submission and result retrieval, provider discovery, support for synchronous and asynchronous evaluation workflows, authentication support for API keys and service accounts, and an Adapter SDK for writing custom evaluation framework adapters. Install with: pip install 'eval-hub-sdk[client]'.",
+      "EvalHub SDK (TP) provides Python client + CLI for evaluation workflows. Supports sync/async jobs, API key auth, and custom adapter development. Install via pip install 'eval-hub-sdk[client]'."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What issue was resolved in RHOAI 3.4 EA1 regarding vLLM on IBM Z platforms?",
+    "correct_answers": [
+      "RHOAIENG-46420 was resolved: before the fix, vLLM inference failed on IBM Z when the temperature parameter was explicitly set in inference requests, causing the serving pod to enter CrashLoopBackOff. This issue is now resolved and the temperature parameter can be used in vLLM inference requests on IBM Z platforms.",
+      "RHOAIENG-46420: vLLM crashed on IBM Z when temperature was set in requests. Fixed in RHOAI 3.4 EA1."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the FAISS vector storage integration in OpenShift AI and how does it work?",
+    "correct_answers": [
+      "FAISS (Facebook AI Similarity Search) is an inline vector store available in OpenShift AI as a Technology Preview. It is a high-performance vector search and clustering library optimized for dense numerical embeddings with both CPU and GPU support. When enabled with an embedded SQLite backend in the Llama Stack Distribution, FAISS stores embeddings locally within the container, removing the need for an external vector database service.",
+      "FAISS is an inline vector store (TP) in the Llama Stack distribution. It uses a local SQLite backend to store embeddings inside the container — no external vector database needed."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What are the key capabilities of the Models-as-a-Service subscription model redesign in RHOAI 3.4?",
+    "correct_answers": [
+      "The MaaS subscription model redesign in RHOAI 3.4 introduces: priority-based subscription assignment (users with multiple groups are assigned the highest-priority subscription by default), group-based access control (subscriptions support OpenShift groups, OIDC group claims, and API key group snapshots), configurable token quotas (distinct token limits per model per subscription), and authorization policy integration for API gateway access control.",
+      "MaaS subscription redesign adds: priority-based assignment for users in multiple groups, group-based access control (OpenShift groups + OIDC claims), per-model token quotas per subscription, and authorization policy integration."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is Kubeflow Trainer v2 and how does it differ from Kubeflow Training Operator v1?",
+    "correct_answers": [
+      "Kubeflow Trainer v2 is a Technology Preview in RHOAI that replaces Kubeflow Training Operator v1 (KFTOv1). It is a Kubernetes-native distributed training solution using a unified TrainJob API and Python SDK. Key capabilities include: simplified job definitions with TrainJob and TrainingRuntime resources, a Python SDK for programmatic job management, a new web-based UI for inspecting training jobs, real-time progress tracking, smart checkpoint management during pod preemption, pausing and resuming train jobs, and resource-aware scheduling via Red Hat build of Kueue.",
+      "Kubeflow Trainer v2 replaces KFTOv1 with a unified TrainJob API, Python SDK, web UI, real-time tracking, smart checkpointing, pause/resume, and Kueue-based scheduling. KFTOv1 is deprecated and will be removed."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What Llama Stack architectures were newly supported in RHOAI 3.4 GA?",
+    "correct_answers": [
+      "Red Hat OpenShift AI 3.4 GA introduces official support for both Llama Stack and KubeRay on the IBM Power architecture.",
+      "RHOAI 3.4 GA adds Llama Stack and KubeRay support on IBM Power (ppc64le)."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "How does vLLM runtime support work for Models-as-a-Service, and how is it enabled?",
+    "correct_answers": [
+      "vLLM runtime support for MaaS is a Technology Preview feature in RHOAI 3.4. A cluster administrator enables it by setting the vLLMDeploymentOnMaaS feature flag in the OdhDashboardConfig custom resource. Once enabled, models can be deployed using the vLLM runtime directly from the MaaS interface. Users access vLLM-served models through the same OpenAI-compatible API endpoints as other MaaS models. The same subscription-based access controls, token quotas, and authorization policies apply.",
+      "vLLM on MaaS (TP): enable via vLLMDeploymentOnMaaS flag in OdhDashboardConfig. Same OpenAI-compat API endpoints, same subscription governance as other MaaS models."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the Gen AI Playground and what capabilities does it provide?",
+    "correct_answers": [
+      "The Generative AI (GenAI) Playground is a unified interactive experience in the OpenShift AI dashboard for experimenting with foundation and custom models. It provides: prompt testing and model comparison, RAG workflows by uploading documents and chatting with their content, integration with approved MCP servers, export of prompts and agent configurations as runnable code for local IDEs, and session-preserved chat context for prompt engineering. The 3.4 EA1 redesign introduced a prompt-lab-style experience with multi-instance chat comparison (side-by-side panes with independent configurations) and basic guardrails from Llama Stack.",
+      "GenAI Playground lets users test prompts, compare models side-by-side, do RAG with uploaded documents, use MCP servers, and export configs as runnable code. Context is preserved within each session."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What Just-In-Time Checkpointing capabilities does Kubeflow Trainer offer in RHOAI 3.4?",
+    "correct_answers": [
+      "Kubeflow Trainer now provides Just-In-Time (JIT) and periodic checkpointing for distributed training jobs. It automatically saves training state (model weights, optimizer state, training step) at regular intervals and immediately before interruptions such as preemption, eviction, or maintenance. Interrupted jobs automatically resume from the latest valid checkpoint. Checkpoints can be stored on PVCs or S3-compatible object storage. With S3, checkpoints are uploaded in the background without pausing training.",
+      "Kubeflow Trainer JIT checkpointing saves model weights + optimizer state before preemption/eviction, enabling automatic resume. Supports PVC and S3 storage; S3 uploads happen in background without pausing training."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What is the Feature Store component and what open-source project is it based on?",
+    "correct_answers": [
+      "Feature Store is a Technology Preview component in OpenShift AI based on the open-source Feast project. It acts as a bridge between ML models and data, enabling consistent and scalable feature management across the ML lifecycle. Key capabilities include: centralized feature repository, Python SDK and CLI, feature definition and management, support for various data sources, data ingestion via materialization, feature retrieval for online inference and offline training, RBAC for sensitive features, scalability for enterprise needs, a searchable feature catalog, and data lineage tracking.",
+      "Feature Store (TP) is based on the open-source Feast project. It provides centralized feature management with Python SDK/CLI, RBAC, online/offline retrieval, data lineage, and a searchable catalog."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What Prometheus metrics are now available for Distributed Inference with llm-d in RHOAI 3.4?",
+    "correct_answers": [
+      "RHOAI 3.4 GA introduces documented Prometheus metrics and PromQL query examples for llm-d distributed inference deployments. These metrics are exported by all llm-d components, including the Endpoint Picker (EPP), vLLM engine pods, and prefix cache, along with example queries for building custom dashboards and configuring ServiceMonitors for OpenShift User Workload Monitoring.",
+      "RHOAI 3.4 GA adds Prometheus metrics for llm-d covering: Endpoint Picker (EPP), vLLM engine pods, and prefix cache, with PromQL examples for dashboards and ServiceMonitor configuration."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  },
+  {
+    "question": "What text embedding models are available in the RHOAI 3.4 Model Catalog, and how are they identified?",
+    "correct_answers": [
+      "The RHOAI 3.4 Model Catalog includes these text embedding models as a Technology Preview: Granite Embedding English R2, Embedding Gemma 300M, Nomic Embed Text v1.5, Qwen3 Embedding 8B, and All-MiniLM-L6-v2. They are available under the 'Other Models' category and labeled with a 'text-embedding' tag on their model cards. They are provided as OCI-compliant ModelCar images ready for deployment on vLLM.",
+      "RHOAI 3.4 embedding models (TP) in 'Other Models' catalog with 'text-embedding' tag: Granite Embedding English R2, Embedding Gemma 300M, Nomic Embed Text v1.5, Qwen3 Embedding 8B, All-MiniLM-L6-v2. Deployed on vLLM as OCI ModelCar images."
+    ],
+    "correct_answer_document_ids": [
+      "Red_Hat_OpenShift_AI_Self-Managed-3.4-Release_notes-en-US_extracted.md"
+    ]
+  }
+]

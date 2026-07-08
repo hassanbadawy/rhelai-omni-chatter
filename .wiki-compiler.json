@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "rhelai-omni-chatter",
+  "sources": [
+    { "path": "wiki/", "exclude": ["wiki-compiled/", "log.md", ".compile-state.json", "compile-log.md"] }
+  ],
+  "output": "wiki-compiled/",
+  "mode": "staging",
+  "auto_update": "prompt",
+  "article_sections": [
+    { "name": "Summary", "description": "Standalone briefing of the topic — what it is, why it exists, who depends on it.", "required": true },
+    { "name": "Architecture & Design", "description": "System shape, layered design, components, dependencies, data flows." },
+    { "name": "Decisions & Rationale", "description": "Architectural decisions with the why; alternatives considered and rejected." },
+    { "name": "Operational Notes", "description": "Runbook commands, deploy patterns, debugging recipes, verification steps." },
+    { "name": "Pitfalls & Known Issues", "description": "Bugs hit, root causes, fixes, and detection signals so they don't recur." },
+    { "name": "Findings & Measurements", "description": "Dated empirical results, benchmarks, red-team outcomes, perf numbers." },
+    { "name": "Sources", "description": "Backlinks to all contributing source files in wiki/.", "required": true }
+  ],
+  "topic_hints": [],
+  "link_style": "markdown"
+}

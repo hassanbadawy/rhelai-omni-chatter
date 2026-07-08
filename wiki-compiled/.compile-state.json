@@ -1,0 +1,37 @@
+{
+  "last_compiled": "2026-05-09",
+  "topics": [
+    "llama-stack-platform",
+    "guardrails-and-safety",
+    "streamlit-playground-ui",
+    "models-and-inference",
+    "rag-and-vector-store",
+    "deployment-and-ops",
+    "flet-framework",
+    "future-work-roadmap"
+  ],
+  "concepts": [
+    "two-image-schema-fork",
+    "wrapping-upstream-where-broken",
+    "helm-upgrade-staleness"
+  ],
+  "source_locations": [
+    "wiki/README.md",
+    "wiki/SOURCES.md",
+    "wiki/architecture.md",
+    "wiki/components.md",
+    "wiki/decisions.md",
+    "wiki/entanglements.md",
+    "wiki/findings.md",
+    "wiki/future-work.md",
+    "wiki/guardrails-redteam-report.md",
+    "wiki/handbooks/flet-handbook.md",
+    "wiki/handbooks/llamastack-handbook.md",
+    "wiki/llama-stack-api-improvements.md",
+    "wiki/model-benchmarks.md",
+    "wiki/pitfalls.md",
+    "wiki/runbook.md"
+  ],
+  "total_sources_scanned": 15,
+  "compile_runs": 1
+}
