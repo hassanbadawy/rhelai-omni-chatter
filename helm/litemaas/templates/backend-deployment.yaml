@@ -36,9 +36,16 @@ spec:
             - sh
             - -c
             - |
+              set -e
               cp -r /app/backend/dist/services/. /patched-services/
+              if ! grep -q 'sub: userResponse\.metadata\.uid,' /patched-services/oauth.service.js; then
+                echo "ERROR: expected pattern 'sub: userResponse.metadata.uid,' not found in oauth.service.js"
+                echo "The backend image may have changed. Check and update the sed patch in backend-deployment.yaml."
+                exit 1
+              fi
               sed -i 's/sub: userResponse\.metadata\.uid,/sub: userResponse.metadata.uid || userResponse.metadata.name,/' \
                 /patched-services/oauth.service.js
+              echo "Patch applied: oauth_id falls back to metadata.name when uid is null (e.g. kube:admin)"
           volumeMounts:
             - name: patched-services
               mountPath: /patched-services
