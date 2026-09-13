@@ -6,6 +6,24 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-09-14 — ogx-ui `ErrImagePull` in `genai`: hardcoded build namespace in chart default
+
+- **Operation:** debug + fix + add pitfall + chart change
+- **Pages updated:**
+  - [`pitfalls.md`](pitfalls.md) — entry #36 (`image.repository` hardcoded to `agentic-ivr`; internal-registry `authentication required` really means repo-not-found)
+- **Source:** Live cluster `cluster-sznd8.sznd8.sandbox4020.opentlc.com`, namespace `genai`. Verbatim event: `Back-off pulling image "image-registry.openshift-image-registry.svc:5000/agentic-ivr/ogx-ui:latest": ErrImagePull ... authentication required`.
+- **Cross-refs:** [`pitfalls.md`](pitfalls.md) ↔ [`components.md`](components.md) ↔ [`runbook.md`](runbook.md) ↔ [`helm/ogx-ui/values.yaml`](../helm/ogx-ui/values.yaml)
+- **Key facts recorded:**
+  - Release `ogx-ui` (chart 2.0.0) was deployed in `genai`, but `image.repository` named namespace `agentic-ivr`, which does not exist on this cluster. No imagestream or buildconfig for ogx-ui existed anywhere (`oc get is -A | grep ogx` → empty).
+  - The OpenShift internal registry answers `authentication required` for a non-existent repository rather than a 404 — do not read it as an RBAC or pull-secret problem before verifying the imagestream exists in the namespace the repository string names.
+  - Fixed on cluster: `oc new-build --binary --strategy=docker --name=ogx-ui -n genai`, `dockerfilePath=Containerfile` patch, `oc start-build --from-dir=./ogx-ui`, then `helm upgrade ... --set image.repository=image-registry.openshift-image-registry.svc:5000/genai/ogx-ui` (revision 2).
+  - Pod `ogx-ui-b8d768f57-lzzmp` reached `1/1 Running`; route `https://ogx-ui-genai.apps.cluster-sznd8.sznd8.sandbox4020.opentlc.com` returns HTTP 200.
+  - Chart fixed at v2.0.1: `values.yaml` default is now `image-registry.openshift-image-registry.svc:5000/{{ .Release.Namespace }}/ogx-ui`, rendered via `tpl` in `deployment.yaml`. Verified with `helm template -n somens` (resolves to `somens`) and with `--set image.repository=quay.io/foo/bar` (override still literal).
+  - `--reuse-values` carries the stale repository forward, so an existing release needs the explicit `--set` once even after the chart default is fixed.
+  - Published as chart `ogx-ui-2.0.1`: GitHub release tag `ogx-ui-2.0.1` with `ogx-ui-2.0.1.tgz` attached, `index.yaml` on `gh-pages` merged with `--url https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/ogx-ui-2.0.1`. Note the runbook's `--url https://hassanbadawy.github.io/...` is wrong for this repo — `gh-pages` holds only `index.html` and `index.yaml`; the `.tgz` lives on the GitHub release. [`runbook.md`](runbook.md) corrected.
+
+---
+
 ## 2026-06-29 — LiteMaaS kube:admin OAuth login fix; helm chart hardened
 
 - **Operation:** debug + fix + add pitfall

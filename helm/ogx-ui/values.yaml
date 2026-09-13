@@ -7,7 +7,9 @@ image:
   #     -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
   #   oc start-build ogx-ui --from-dir=./ogx-ui --follow -n <namespace>
   # Or override `image.repository` to point at a public registry image.
-  repository: image-registry.openshift-image-registry.svc:5000/agentic-ivr/ogx-ui
+  # {{ .Release.Namespace }} is rendered at install time, so the image is pulled
+  # from the imagestream in whichever namespace the release is deployed to.
+  repository: "image-registry.openshift-image-registry.svc:5000/{{ .Release.Namespace }}/ogx-ui"
   tag: "latest"
   pullPolicy: Always
 

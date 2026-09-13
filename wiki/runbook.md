@@ -264,12 +264,25 @@ gh release create <chart>-<version> <chart>-<version>.tgz \
   --notes "Release notes here"
 
 # 4. Update gh-pages index.yaml
-git checkout gh-pages
-helm repo index --merge index.yaml --url https://hassanbadawy.github.io/rhelai-omni-chatter .
-git add index.yaml
-git commit -m "Add <chart> <version>"
-git push
-git checkout main
+#    gh-pages holds ONLY index.html + index.yaml — the .tgz lives on the GitHub release,
+#    so --url must be the release download base, not the gh-pages site URL.
+#    (Corrected 2026-09-14: the old recipe used the github.io URL, which yields 404 on `helm install`.)
+git worktree add /tmp/ghp gh-pages
+mkdir -p /tmp/newchart && cp <chart>-<version>.tgz /tmp/newchart/
+helm repo index /tmp/newchart --merge /tmp/ghp/index.yaml \
+  --url https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/<chart>-<version>
+cp /tmp/newchart/index.yaml /tmp/ghp/index.yaml
+git -C /tmp/ghp add index.yaml
+git -C /tmp/ghp commit -m "Add <chart> <version>"
+git -C /tmp/ghp push
+git worktree remove /tmp/ghp
+```
+
+Verify after publishing:
+
+```bash
+helm repo add hassanbadawy https://hassanbadawy.github.io/rhelai-omni-chatter/ && helm repo update
+helm search repo hassanbadawy/<chart> --versions | head
 ```
 
 ## Run the wiki linter

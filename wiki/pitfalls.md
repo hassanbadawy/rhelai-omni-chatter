@@ -2,6 +2,72 @@
 
 ---
 
+## 36. `ogx-ui` chart hardcoded the build namespace in `image.repository` → `ErrImagePull: authentication required`
+
+*Observed 2026-09-14, namespace `genai`, cluster `cluster-sznd8.sznd8.sandbox4020.opentlc.com`.*
+
+**Symptom:** The `ogx-ui` pod never starts:
+
+```
+Back-off pulling image "image-registry.openshift-image-registry.svc:5000/agentic-ivr/ogx-ui:latest":
+ErrImagePull: ... reading manifest latest in image-registry.openshift-image-registry.svc:5000/agentic-ivr/ogx-ui:
+authentication required
+```
+
+**Root cause:** two things, in this order.
+
+1. `helm/ogx-ui/values.yaml` shipped `image.repository` with a *literal* namespace baked in
+   (`.../agentic-ivr/ogx-ui`) — a leftover from whichever namespace the image was last built in.
+   The release was installed into `genai`, so the deployment pointed at a namespace that does not
+   exist on this cluster (`oc get ns | grep agentic` → nothing).
+2. No image had ever been built in `genai` — `oc get is,bc -n genai | grep ogx` was empty.
+
+**"authentication required" is misleading.** The OpenShift internal registry returns
+`authentication required` (not `404 manifest unknown`) for a repository that does not exist, because
+it refuses to confirm or deny existence to a caller without pull rights on it. Read it as
+**"repo/tag not found, or the puller has no rights on that namespace"** — check the imagestream
+exists *in the namespace the repository string names* before chasing pull secrets or RBAC.
+
+**Fix (cluster side):** build in the release namespace, then repoint the release.
+
+```bash
+NS=genai
+oc new-build --binary --strategy=docker --name=ogx-ui -n $NS
+oc patch bc/ogx-ui -n $NS --type=json \
+  -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
+oc start-build ogx-ui --from-dir=./ogx-ui --follow -n $NS
+helm upgrade ogx-ui helm/ogx-ui/ -n $NS --reuse-values \
+  --set image.repository="image-registry.openshift-image-registry.svc:5000/$NS/ogx-ui"
+```
+
+**Fix (chart side, v2.0.1):** the default is now namespace-aware and rendered through `tpl`, so a
+plain `helm install` into any namespace resolves to that namespace's imagestream:
+
+```yaml
+# helm/ogx-ui/values.yaml
+image:
+  repository: "image-registry.openshift-image-registry.svc:5000/{{ .Release.Namespace }}/ogx-ui"
+```
+```yaml
+# helm/ogx-ui/templates/deployment.yaml
+image: "{{ tpl .Values.image.repository . }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+```
+
+`tpl` is a no-op for a plain string, so `--set image.repository=quay.io/...` still works unchanged.
+
+**Note on `--reuse-values`:** the bad value was carried in the release, not just in the chart file.
+Bumping the chart default alone would not have fixed an existing release upgraded with
+`--reuse-values` — the explicit `--set` above is required once. Same class of trap as the
+`vllm.url` / `vllm.apiToken` staleness documented in [`runbook.md`](runbook.md).
+
+**Files:** [`helm/ogx-ui/values.yaml`](../helm/ogx-ui/values.yaml),
+[`helm/ogx-ui/templates/deployment.yaml`](../helm/ogx-ui/templates/deployment.yaml),
+[`helm/ogx-ui/Chart.yaml`](../helm/ogx-ui/Chart.yaml) (2.0.0 → 2.0.1).
+
+**Cross-refs:** [`components.md`](components.md) `helm/ogx-ui`, [`runbook.md`](runbook.md) build recipe.
+
+---
+
 ## 35. LlamaStack 0.7.x — `vector_stores.default_embedding_model.model_id` must equal `provider_model_id`
 
 **Symptom:** `CrashLoopBackOff` with: `Embedding model 'sentence-transformers/granite-embedding-125m' not found. Available: ['sentence-transformers/ibm-granite/granite-embedding-125m-english']`
