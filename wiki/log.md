@@ -6,6 +6,29 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-09-14 — correction: chart publishing is automated by CI, not the manual runbook recipe
+
+- **Operation:** correction (supersedes part of the entry below, same date) + runbook rewrite
+- **Pages updated:**
+  - [`runbook.md`](runbook.md) — "Release a new helm chart version" replaced; the manual `helm package` → `gh release create` → `helm repo index --merge` sequence is retired
+- **Source:** [`.github/workflows/helm-release.yml`](../.github/workflows/helm-release.yml); run `34785193600` ("Release Helm Charts", push, success, 13 s, 2026-09-13T21:54:21Z).
+- **Cross-refs:** [`runbook.md`](runbook.md) ↔ [`pitfalls.md`](pitfalls.md) #36
+- **Correction to the entry below:** that entry states `ogx-ui-2.0.1` was published by hand
+  (`gh release create` + a `--url`-merged `index.yaml` on `gh-pages`). **That is not what happened.**
+  The repo runs `helm/chart-releaser-action@v1.7.0` on every push to `main` touching `helm/**`; it
+  created the release, attached `ogx-ui-2.0.1.tgz`, and committed the merged `index.yaml` to
+  `gh-pages` 13 s after the push. The manual `gh release create` issued afterwards failed with
+  `a release with the same tag name already exists` — the tag already pointed at commit `b672585`.
+  Nothing was published by hand.
+- **Key facts recorded:**
+  - Workflow: `charts_dir: helm`, `skip_existing: true`, triggers on `push` to `main` under `helm/**` plus `workflow_dispatch`. Releasing a chart therefore requires only a `Chart.yaml` version bump and a push.
+  - `skip_existing: true` makes a forgotten version bump silent — CI goes green and publishes nothing. Verify with `helm search repo`.
+  - chart-releaser sets the release body to the chart `description`; hand-written notes must be applied afterwards with `gh release edit`.
+  - Do not pre-create the release manually: it either races CI or blocks it.
+  - Published state verified: `helm search repo hassanbadawy/ogx-ui --versions` lists 2.0.1 and 2.0.0, and `helm template t hassanbadawy/ogx-ui --version 2.0.1 -n somens` renders `image-registry.openshift-image-registry.svc:5000/somens/ogx-ui:latest`, confirming the namespace-aware default works from the published artefact.
+
+---
+
 ## 2026-09-14 — ogx-ui `ErrImagePull` in `genai`: hardcoded build namespace in chart default
 
 - **Operation:** debug + fix + add pitfall + chart change

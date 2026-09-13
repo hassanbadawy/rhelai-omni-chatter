@@ -252,38 +252,54 @@ Use `helm/ogx-ui` instead. The genaiops `0.3.0-fix` image has a `RAGDocument` di
 
 ## Release a new helm chart version
 
+**Publishing is automated — do not run `gh release create` or touch `gh-pages` by hand.**
+[`.github/workflows/helm-release.yml`](../.github/workflows/helm-release.yml) runs
+`helm/chart-releaser-action@v1.7.0` (`charts_dir: helm`, `skip_existing: true`) on every push to
+`main` that touches `helm/**`. For each chart whose `Chart.yaml` `version` is not already released it
+packages the chart, creates the GitHub release `<chart>-<version>` with the `.tgz` attached, and
+commits the merged `index.yaml` to `gh-pages`. Typical end-to-end time is ~15 s plus a ~40 s Pages
+build.
+
+So the whole release procedure is:
+
 ```bash
 # 1. Bump version in helm/<chart>/Chart.yaml
-
-# 2. Package
-helm package helm/<chart>/
-
-# 3. Create GitHub release with the .tgz attached
-gh release create <chart>-<version> <chart>-<version>.tgz \
-  --title "<chart> <version>" \
-  --notes "Release notes here"
-
-# 4. Update gh-pages index.yaml
-#    gh-pages holds ONLY index.html + index.yaml — the .tgz lives on the GitHub release,
-#    so --url must be the release download base, not the gh-pages site URL.
-#    (Corrected 2026-09-14: the old recipe used the github.io URL, which yields 404 on `helm install`.)
-git worktree add /tmp/ghp gh-pages
-mkdir -p /tmp/newchart && cp <chart>-<version>.tgz /tmp/newchart/
-helm repo index /tmp/newchart --merge /tmp/ghp/index.yaml \
-  --url https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/<chart>-<version>
-cp /tmp/newchart/index.yaml /tmp/ghp/index.yaml
-git -C /tmp/ghp add index.yaml
-git -C /tmp/ghp commit -m "Add <chart> <version>"
-git -C /tmp/ghp push
-git worktree remove /tmp/ghp
+# 2. Commit and push to main
+git add helm/<chart> && git commit -m "..." && git push origin main
+# 3. Watch CI do the rest
+gh run list --limit 3
 ```
 
-Verify after publishing:
+Verify once the run is green:
 
 ```bash
-helm repo add hassanbadawy https://hassanbadawy.github.io/rhelai-omni-chatter/ && helm repo update
+helm repo add hassanbadawy https://hassanbadawy.github.io/rhelai-omni-chatter/ --force-update
+helm repo update hassanbadawy
 helm search repo hassanbadawy/<chart> --versions | head
+helm template t hassanbadawy/<chart> --version <version> -n somens | head   # sanity-render
 ```
+
+Notes and gotchas:
+
+- **The release body is the chart `description`**, not hand-written notes — that's chart-releaser's
+  default. If you want real release notes, edit the release after CI creates it
+  (`gh release edit <chart>-<version> --notes "..."`), never create it yourself first.
+- **Racing CI produces a confusing error.** Running `gh release create <chart>-<version> ...`
+  manually after pushing fails with `a release with the same tag name already exists` — because CI
+  already made it seconds earlier. Check `gh release view <chart>-<version>` before assuming your
+  command did nothing; the artefact is usually already correct and published.
+- **`skip_existing: true` means a forgotten version bump is silent.** If `Chart.yaml` still carries
+  an already-released version, CI succeeds and publishes nothing. Always confirm with
+  `helm search repo`.
+- `gh-pages` holds only `index.html` and `index.yaml`; the `.tgz` files live on GitHub Releases, and
+  `index.yaml` URLs point at
+  `https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/<chart>-<version>/<chart>-<version>.tgz`.
+
+*Corrected 2026-09-14. The previous version of this section described a manual
+`helm package` → `gh release create` → `helm repo index --merge` on `gh-pages` sequence, and its
+`--url` pointed at the github.io site instead of the release download base. Both were wrong: the
+manual flow is superseded by the workflow above, and the site URL would yield 404s on
+`helm install`. See [`log.md`](log.md) 2026-09-14.*
 
 ## Run the wiki linter
 
