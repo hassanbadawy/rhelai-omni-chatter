@@ -6,6 +6,63 @@ When a finding is later overturned, **append a correction with a new date** and 
 
 ---
 
+## 2026-09-14 — `genai` namespace: Llama Stack service is `lsd-genai-playground-service`, not `llama-stack-service`
+
+Cluster `cluster-sznd8.sznd8.sandbox4020.opentlc.com`, namespace `genai`.
+
+The `ogx-ui` Settings page reported `Cannot reach http://llama-stack-service:8321` — the chart
+default from [`helm/ogx-ui/values.yaml`](../helm/ogx-ui/values.yaml) (`ui.llamaStackUrl`). There is
+no such service in `genai`:
+
+```
+$ oc get svc -n genai | grep -iE 'llama|lsd|stack'
+lsd-genai-playground-service   ClusterIP   172.30.34.146   <none>   8321/TCP,9464/TCP
+```
+
+**The operator names the Service `<CR name>-service`.** Our docs record `llama-stack-service`
+because the CR in the reference deployments is named `llama-stack`. In `genai` the
+`LlamaStackDistribution` CR is named `lsd-genai-playground`, so the Service is
+`lsd-genai-playground-service`. **Always derive the URL from the live cluster, never from the
+documented default**:
+
+```bash
+oc get svc -n <ns> -o name | grep -i stack
+```
+
+(Note the `llamastackdistribution` resource type is not registered on this cluster's API server —
+`oc get llamastackdistribution -A` errors — so read the Service, not the CR.)
+
+**Registered models here do not use a bare `vllm/` prefix.** The provider is `vllm-inference-1`, so
+`/v1/models` returns:
+
+| Type | ID |
+|---|---|
+| llm | `vllm-inference-1/redhataiministral-3-3b-instruc` |
+| llm | `vllm-inference-1/publishers/genai/models/redhataiministral-3-3b-instruc` (duplicate registration of the same model) |
+| embedding | `sentence-transformers/ibm-granite/granite-embedding-125m-english` (768) |
+| embedding | `sentence-transformers/nomic-ai/nomic-embed-text-v1.5` (768) |
+| rerank | `sentence-transformers/Qwen/Qwen3-Reranker-0.6B` |
+
+The rule from the 2026-07-02 finding below still holds — the ID is `{provider_id}/{provider_model_id}` —
+but `provider_id` is deployment-specific. Don't hardcode `vllm/`.
+
+**Fix applied:**
+
+```bash
+helm upgrade ogx-ui hassanbadawy/ogx-ui --version 2.0.1 -n genai --reuse-values \
+  --set ui.llamaStackUrl="http://lsd-genai-playground-service:8321" \
+  --set ui.defaultModel="vllm-inference-1/redhataiministral-3-3b-instruc"
+```
+
+Verified from inside the pod: `/v1/models` returns the list above and `/v1/version` returns 200.
+`LLAMA_STACK_API_ENDPOINT` and `DEFAULT_MODEL` are set correctly in the new pod, and
+`/tmp/ogx-ui-data/config.yaml` does not exist yet — so the env defaults govern until a user saves
+Settings, which is what makes this fix take effect without rebuilding the image.
+
+**Cross-refs:** [`pitfalls.md`](pitfalls.md) #36 (same deployment, image pull), [`components.md`](components.md).
+
+---
+
 ## 2026-07-02 — LlamaStack 0.7.2+rhaiv.0 schema: complete break from 0.3.x/0.6.x
 
 Deployed in RHOAI 3.4 (`rh-dev` distribution). Seven breaking changes vs the 0.3.x/0.6.x schema documented in this wiki and the Helm chart — all discovered via CrashLoopBackOff debugging:

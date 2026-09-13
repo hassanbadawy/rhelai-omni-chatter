@@ -6,6 +6,22 @@ Format per entry: date header, **Operation**, **Pages updated**, **Source** (if 
 
 ---
 
+## 2026-09-14 — ogx-ui in `genai` pointed at the wrong Llama Stack service
+
+- **Operation:** debug + fix + add finding
+- **Pages updated:**
+  - [`findings.md`](findings.md) — "genai namespace: Llama Stack service is `lsd-genai-playground-service`"
+- **Source:** Live cluster `cluster-sznd8.sznd8.sandbox4020.opentlc.com`, namespace `genai`. UI Settings page error: `Cannot reach http://llama-stack-service:8321`.
+- **Cross-refs:** [`findings.md`](findings.md) ↔ [`pitfalls.md`](pitfalls.md) #36 ↔ [`components.md`](components.md)
+- **Key facts recorded:**
+  - The operator names the Service `<CR name>-service`; the CR here is `lsd-genai-playground`, so the Service is `lsd-genai-playground-service`. The documented `llama-stack-service` only holds where the CR is named `llama-stack`.
+  - `oc get llamastackdistribution -A` fails on this cluster (resource type not registered) — discover the endpoint from `oc get svc -n <ns> | grep -i stack`.
+  - Provider id is `vllm-inference-1`, not `vllm`; the LLM registers as `vllm-inference-1/redhataiministral-3-3b-instruc` (Ministral-3-3B-Instruct-2512), plus a duplicate registration under `.../publishers/genai/models/...`.
+  - Fixed with `helm upgrade ogx-ui hassanbadawy/ogx-ui --version 2.0.1 -n genai --reuse-values --set ui.llamaStackUrl=... --set ui.defaultModel=...` (revision 3) — this also moved the live release onto the published 2.0.1 chart.
+  - Chart defaults were left unchanged: `llama-stack-service` remains the right generic default; the service name is per-install, not a chart bug.
+
+---
+
 ## 2026-09-14 — correction: chart publishing is automated by CI, not the manual runbook recipe
 
 - **Operation:** correction (supersedes part of the entry below, same date) + runbook rewrite
