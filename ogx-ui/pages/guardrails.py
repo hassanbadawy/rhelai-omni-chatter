@@ -280,6 +280,16 @@ def _get_llm(prompt, model):
 def _run_shield(shield_id, text):
     t0 = time.time()
     try:
+        # OGX (RHOAI 3.5) has no /v1/safety/run-shield; use NeMo when configured.
+        _cfg = load_config()
+        _gr = _cfg.get("guardrails_url", "")
+        if _cfg.get("safety_enabled") and _gr:
+            v = client.run_nemo_guardrail(
+                _gr, [{"role": "user", "content": text}],
+                _cfg.get("model", ""),
+                _cfg.get("guardrails_config_id", "guardrail-config"),
+            )
+            return v, int((time.time() - t0) * 1000), None
         v = client.run_shield(shield_id, [{"role":"user","content":text}])
         ms = int((time.time()-t0)*1000)
         return v, ms, None

@@ -21,6 +21,11 @@ DEFAULTS = {
     "top_p": 0.9,
     "max_tokens": 1024,
     "safety_enabled": False,
+    # --- NeMo Guardrails (RHOAI 3.5 / OGX) ---
+    # OGX does not implement /v1/shields or /v1/safety/run-shield. When
+    # guardrails_url is set, safety goes to NeMo /v1/guardrail/checks instead.
+    "guardrails_url": os.environ.get("NEMO_GUARDRAILS_URL", ""),
+    "guardrails_config_id": os.environ.get("NEMO_GUARDRAILS_CONFIG_ID", "guardrail-config"),
     "input_shields": [],
     "output_shields": [],
 }

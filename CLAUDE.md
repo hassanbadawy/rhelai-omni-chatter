@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **rhelai-omni-chatter** — a multi-service AI platform deployed on Red Hat OpenShift. The core components are:
 
 1. **Llama Stack** — LLM inference server with RAG, safety shields, agents, and the Responses API
-2. **Llama Stack Playground** (`llama-stack-ui/`) — Streamlit UI for chat, documents/RAG, and settings
+2. **OGX UI** (`ogx-ui/`) — Streamlit UI for chat, documents/RAG, and settings
 3. **Guardrails Orchestrator** — Server-side content safety (HAP, prompt injection, language detection, regex)
 4. **Milvus** — Vector database for RAG (standalone or inline)
 5. **Helm Charts** (`helm/`) — Deployable charts for all components, published at `https://hassanbadawy.github.io/rhelai-omni-chatter/`
@@ -67,8 +67,7 @@ When you discover, decide, fix, or measure anything that a future Claude session
 ```
 ├── helm/
 │   ├── llama-stack/              # Llama Stack chart (guardrails + milvus + RAG)
-│   ├── llama-stack-playground/   # Streamlit playground UI chart (standalone, points at any Llama Stack)
-│   ├── llama-stack-ui/           # Our custom Streamlit UI chart (built from llama-stack-ui/)
+│   ├── ogx-ui/                   # Our custom Streamlit UI chart (built from ogx-ui/)
 │   ├── guardrails-orchestrator/  # Orchestrator + bundled HF detectors (v0.2.0+, self-contained)
 │   ├── anythingllm/
 │   ├── dashy/
@@ -85,7 +84,7 @@ When you discover, decide, fix, or measure anything that a future Claude session
 │   ├── postgrest/
 │   ├── qdrant/
 │   └── swagger-ui/
-├── llama-stack-ui/           # Streamlit playground app
+├── ogx-ui/                   # Streamlit UI (OGX / Llama Stack client)
 │   ├── app.py                # Entry point
 │   ├── pages/
 │   │   ├── chat.py           # Chat with streaming, RAG, and safety shields
@@ -201,42 +200,9 @@ helm install llama-stack hassanbadawy/llama-stack
 
 To publish a new version: bump `Chart.yaml` version, `helm package`, `gh release create`, update `gh-pages` index.yaml via `helm repo index --merge`.
 
-## Helm Chart: llama-stack-playground (`helm/llama-stack-playground/`)
+## Helm Chart: ogx-ui (`helm/ogx-ui/`)
 
-A standalone Helm chart that deploys the Streamlit playground UI (`quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix`) as an OpenShift workload. It is **independent** of the `llama-stack` chart — it only needs a Llama Stack backend URL to connect to.
-
-**Known bugs in the upstream image:**
-- File upload crashes with `AttributeError: 'dict' object has no attribute 'content'` at `/app/llama_stack/distribution/ui/page/upload/upload.py:59` — the SDK 0.3.0 returns `RAGDocument` as a dict but the code uses attribute access. Use `helm/llama-stack-ui` for document upload until upstream fixes this.
-- Default chat mode is **Direct**, which bypasses safety shields entirely. Shields only apply in **Agent-based** mode (and even there, the agent runtime wraps the user message before calling the safety API). If you need shields on every plain chat message, use `helm/llama-stack-ui` instead.
-
-### Key values
-
-| Value | Default | Purpose |
-|-------|---------|---------|
-| `playground.llamaStackUrl` | `http://llama-stack:8321` | Llama Stack backend URL — override to point at your llama-stack service |
-| `playground.defaultModel` | `meta-llama/Llama-3.2-3B-Instruct` | Default model pre-selected in the UI |
-| `image.repository` | `quay.io/rhoai-genaiops/llama-stack-playground` | Container image |
-| `image.tag` | `0.3.0-fix` | Image tag |
-| `route.enabled` | `true` | Creates an OpenShift Route with TLS edge termination |
-
-### Quick deploy
-
-```bash
-# Deploy alongside the llama-stack chart in the same namespace (uses in-cluster service name)
-helm install llama-stack-playground helm/llama-stack-playground/ -n <namespace>
-
-# Point at an external or different namespace llama-stack
-helm install llama-stack-playground helm/llama-stack-playground/ -n <namespace> \
-  --set playground.llamaStackUrl="http://llama-stack.<other-ns>.svc:8321"
-```
-
-### NetworkPolicy
-
-`networkPolicy.enabled` defaults to `false`. An earlier version defaulted to `true` with egress targeting label `app.kubernetes.io/name: llama-stack`, which caused `APIConnectionError` because the llama-stack chart labels pods as `app: llama-stack` — a mismatch that silently blocked all outbound traffic from the playground.
-
-## Helm Chart: llama-stack-ui (`helm/llama-stack-ui/`)
-
-A standalone Helm chart that deploys our **custom** Streamlit UI (`llama-stack-ui/` source dir) as an OpenShift workload. Use this in preference to the genaiops `llama-stack-playground` chart when you need:
+A standalone Helm chart that deploys our **custom** Streamlit UI (`ogx-ui/` source dir) as an OpenShift workload. It replaces the genaiops `llama-stack-playground` chart (removed from this repo) and gives you:
 
 - Working document upload (genaiops 0.3.0-fix has a `RAGDocument` dict-vs-object bug that breaks file uploads)
 - Context-length probing (`max_tokens` capped to `context_length / 2` for small-context models)
@@ -248,10 +214,10 @@ A standalone Helm chart that deploys our **custom** Streamlit UI (`llama-stack-u
 The chart defaults to the OpenShift internal registry. Build from source first:
 
 ```bash
-oc new-build --binary --strategy=docker --name=llama-stack-ui -n <namespace>
-oc patch bc/llama-stack-ui -n <namespace> --type=json \
+oc new-build --binary --strategy=docker --name=ogx-ui -n <namespace>
+oc patch bc/ogx-ui -n <namespace> --type=json \
   -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
-oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n <namespace>
+oc start-build ogx-ui --from-dir=./ogx-ui --follow -n <namespace>
 ```
 
 Or override `image.repository` to point at a public image you've built and pushed yourself.
@@ -262,7 +228,7 @@ Or override `image.repository` to point at a public image you've built and pushe
 |-------|---------|---------|
 | `ui.llamaStackUrl` | `http://llama-stack-service:8321` | Llama Stack backend URL — exported as `LLAMA_STACK_API_ENDPOINT` |
 | `ui.defaultModel` | `""` | Default model — exported as `DEFAULT_MODEL`. Must include the `vllm/` prefix (e.g. `vllm/qwen25-7b-instruct`) |
-| `image.repository` | `image-registry.openshift-image-registry.svc:5000/<namespace>/llama-stack-ui` | In-cluster image — `<namespace>` is whichever namespace ran `oc new-build`. Override for external registries. |
+| `image.repository` | `image-registry.openshift-image-registry.svc:5000/<namespace>/ogx-ui` | In-cluster image — `<namespace>` is whichever namespace ran `oc new-build`. Override for external registries. |
 | `route.enabled` | `true` | Creates an OpenShift Route with TLS edge termination |
 
 ### Config sourcing
@@ -272,12 +238,12 @@ The UI loads its config from `config.yaml` first, then falls back to env vars (`
 ### Quick deploy
 
 ```bash
-helm install llama-stack-ui helm/llama-stack-ui/ -n <namespace> \
+helm install ogx-ui helm/ogx-ui/ -n <namespace> \
   --set ui.llamaStackUrl="http://llama-stack-service:8321" \
   --set ui.defaultModel="vllm/qwen25-7b-instruct"
 ```
 
-## Streamlit Playground (`llama-stack-ui/`)
+## Streamlit Playground (`ogx-ui/`)
 
 ### Architecture
 
@@ -307,7 +273,7 @@ Settings page shows shields from `/v1/shields` as multiselect checkboxes for inp
 ### Running Locally
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 export LLAMA_STACK_API_ENDPOINT="https://llama-stack-<namespace>.apps.<cluster>"
 streamlit run app.py
 # or: ./run.sh
@@ -439,7 +405,7 @@ guardrails:
 ### Testing Guardrails
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 ./tests/test-guardrails.sh    # 18 e2e tests
 ```
 

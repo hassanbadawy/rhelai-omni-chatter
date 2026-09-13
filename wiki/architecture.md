@@ -5,7 +5,7 @@ The deployed stack is layered. Each layer has one job and is connected by stable
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  UI layer                                                                │
-│   ├─ helm/llama-stack-ui (our Streamlit app, source in llama-stack-ui/) │
+│   ├─ helm/ogx-ui (our Streamlit app, source in llama-stack-ui/) │
 │   └─ helm/llama-stack-playground (genaiops upstream, optional)          │
 └────────────────┬─────────────────────────────────────────────────────────┘
                  │ HTTPS (OpenShift Route, edge TLS)
@@ -45,7 +45,7 @@ The UI orchestrates both: it calls `/v1/safety/run-shield` on input, then `/v1/r
 
 ## Why these specific layers
 
-### Why a custom UI (`helm/llama-stack-ui`) on top of the upstream playground
+### Why a custom UI (`helm/ogx-ui`) on top of the upstream playground
 
 The upstream `genaiops/llama-stack-playground:0.3.0-fix` image has two blocking bugs:
 

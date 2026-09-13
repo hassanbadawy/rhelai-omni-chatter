@@ -2,12 +2,12 @@
 
 ## Summary [coverage: high -- 5 sources]
 
-The Streamlit playground UI in [`llama-stack-ui/`](../../llama-stack-ui) is the primary user-facing surface for the rhelai-omni-chatter stack. It exposes three pages — chat (with streaming, RAG, and shields), document/RAG management, and settings — and orchestrates two server-side paths through Llama Stack: `POST /v1/chat/completions` for inference and `POST /v1/safety/run-shield` for safety. Both paths are independent inside Llama Stack, but the UI chains them per turn (input shield → RAG retrieval → chat completion → output shield). See [`architecture.md`](../../wiki/architecture.md) for the layered diagram.
+The Streamlit playground UI in [`ogx-ui/`](../../ogx-ui) is the primary user-facing surface for the rhelai-omni-chatter stack. It exposes three pages — chat (with streaming, RAG, and shields), document/RAG management, and settings — and orchestrates two server-side paths through Llama Stack: `POST /v1/chat/completions` for inference and `POST /v1/safety/run-shield` for safety. Both paths are independent inside Llama Stack, but the UI chains them per turn (input shield → RAG retrieval → chat completion → output shield). See [`architecture.md`](../../wiki/architecture.md) for the layered diagram.
 
 The repository ships **two** UI helm charts and the custom one is the recommended path:
 
 - [`helm/llama-stack-playground`](../../helm/llama-stack-playground) — packages the upstream `quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix` image. Has two blocking bugs documented in [`architecture.md`](../../wiki/architecture.md) "Why a custom UI": (1) file upload crashes with `AttributeError: 'dict' object has no attribute 'content'` at `upload.py:59` because `RAGDocument` returns a `dict` in `llama-stack-client` 0.3.0; (2) the default chat mode is **Direct**, which bypasses safety shields entirely (shields only fire in Agent-based mode).
-- [`helm/llama-stack-ui`](../../helm/llama-stack-ui) — packages our custom Streamlit app from [`llama-stack-ui/`](../../llama-stack-ui). Fixes the `RAGDocument` dict access, runs `/v1/safety/run-shield` on every message regardless of mode, adds context-length probing, and detects SSE errors that arrive inside HTTP 200 streams. See [`decisions.md`](../../wiki/decisions.md) decision 7 for the trade-off (we lose the upstream Agent/ReAct features in exchange).
+- [`helm/ogx-ui`](../../helm/ogx-ui) — packages our custom Streamlit app from [`ogx-ui/`](../../ogx-ui). Fixes the `RAGDocument` dict access, runs `/v1/safety/run-shield` on every message regardless of mode, adds context-length probing, and detects SSE errors that arrive inside HTTP 200 streams. See [`decisions.md`](../../wiki/decisions.md) decision 7 for the trade-off (we lose the upstream Agent/ReAct features in exchange).
 
 ## Architecture & Design [coverage: high -- 4 sources]
 
@@ -22,7 +22,7 @@ The repository ships **two** UI helm charts and the custom one is the recommende
 
 **`modules/config.py` is the YAML loader.** Reads `config.yaml` and writes `conversations.json` under `${LLAMA_STACK_UI_DATA_DIR}` if set, defaulting to the package directory. Empty-string YAML values are treated as "not set" so env-var defaults (`LLAMA_STACK_API_ENDPOINT`, `DEFAULT_MODEL`) take precedence. Every API call re-reads config via `load_config()` — there is no client-level cache (see [`entanglements.md`](../../wiki/entanglements.md) "config.yaml Field Consumers").
 
-**Helm-managed env vars** (per [`components.md`](../../wiki/components.md) "helm/llama-stack-ui"):
+**Helm-managed env vars** (per [`components.md`](../../wiki/components.md) "helm/ogx-ui"):
 
 | Helm value | Env var | Default |
 |---|---|---|
@@ -54,7 +54,7 @@ The repository ships **two** UI helm charts and the custom one is the recommende
 oc new-build --binary --strategy=docker --name=llama-stack-ui -n <namespace>
 oc patch bc/llama-stack-ui -n <namespace> --type=json \
   -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
-oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n <namespace>
+oc start-build llama-stack-ui --from-dir=./ogx-ui --follow -n <namespace>
 ```
 
 This populates `image-registry.openshift-image-registry.svc:5000/<namespace>/llama-stack-ui`. To use an external registry, override `image.repository`.
@@ -62,7 +62,7 @@ This populates `image-registry.openshift-image-registry.svc:5000/<namespace>/lla
 **Helm install** (per [`components.md`](../../wiki/components.md)):
 
 ```bash
-helm install llama-stack-ui helm/llama-stack-ui/ -n <namespace> \
+helm install ogx-ui helm/ogx-ui/ -n <namespace> \
   --set ui.llamaStackUrl="http://llama-stack-service:8321" \
   --set ui.defaultModel="vllm/qwen25-7b-instruct"
 ```
@@ -80,7 +80,7 @@ If `endpoint` shows the developer URL instead of the chart-supplied one, the bak
 **Run locally** (per project root `CLAUDE.md`):
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 export LLAMA_STACK_API_ENDPOINT="https://llama-stack-<namespace>.apps.<cluster>"
 streamlit run app.py
 # or: ./run.sh

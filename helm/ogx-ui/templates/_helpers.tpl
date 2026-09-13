@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "llama-stack-ui.name" -}}
+{{- define "ogx-ui.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "llama-stack-ui.fullname" -}}
+{{- define "ogx-ui.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "llama-stack-ui.chart" -}}
+{{- define "ogx-ui.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "llama-stack-ui.labels" -}}
-helm.sh/chart: {{ include "llama-stack-ui.chart" . }}
-{{ include "llama-stack-ui.selectorLabels" . }}
+{{- define "ogx-ui.labels" -}}
+helm.sh/chart: {{ include "ogx-ui.chart" . }}
+{{ include "ogx-ui.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,17 +43,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "llama-stack-ui.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "llama-stack-ui.name" . }}
+{{- define "ogx-ui.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ogx-ui.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "llama-stack-ui.serviceAccountName" -}}
+{{- define "ogx-ui.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "llama-stack-ui.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "ogx-ui.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

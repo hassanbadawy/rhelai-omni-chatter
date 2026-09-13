@@ -63,7 +63,7 @@ The standing risk in any deferred-work list is that "soon" never comes, and the 
     - *Managed memory services* (Mem0, Zep, Letta, Cognee, Cloudflare Agent Memory): explicitly skipped. They pull the wiki off git, forfeiting auditability and PR-reviewability — the substrate that makes the pattern valuable.
     Action: the staged adoption plan in [`future-work.md`](../../wiki/future-work.md) "Wiki tooling roadmap" is the synthesis. Phase 1 (`llm-wiki-compiler`) is the highest-leverage drop-in; Phase 2 (`memsearch` against existing Milvus) is the dogfooding play; Phase 3 (Obsidian MCP) is conditional on scale.
 
-- **2026-05-09 — Wiki bootstrap.** The legacy `llama-stack-ui/docs/` and `docs/` were merged into `wiki/`. `findings.md` was created as a new page; pre-existing dated observations live in [`pitfalls.md`](../../wiki/pitfalls.md), [`decisions.md`](../../wiki/decisions.md), and [`model-benchmarks.md`](../../wiki/model-benchmarks.md). This bootstrap is what made the future-work tooling survey possible — there was now a single canonical wiki for tools to layer on top of.
+- **2026-05-09 — Wiki bootstrap.** The legacy `ogx-ui/docs/` and `docs/` were merged into `wiki/`. `findings.md` was created as a new page; pre-existing dated observations live in [`pitfalls.md`](../../wiki/pitfalls.md), [`decisions.md`](../../wiki/decisions.md), and [`model-benchmarks.md`](../../wiki/model-benchmarks.md). This bootstrap is what made the future-work tooling survey possible — there was now a single canonical wiki for tools to layer on top of.
 
 ## Sources [coverage: high -- 2 sources]
 

@@ -28,13 +28,13 @@ The Llama Stack chart. Two modes via `guardrails.enabled`.
 
 Standalone deploy of the upstream genaiops Streamlit playground (`quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix`).
 
-**Use this only when document upload and per-message shields are not needed.** The upstream image has two known bugs (see [`architecture.md`](architecture.md) "Why a custom UI"). Our `helm/llama-stack-ui` is the preferred path.
+**Use this only when document upload and per-message shields are not needed.** The upstream image has two known bugs (see [`architecture.md`](architecture.md) "Why a custom UI"). Our `helm/ogx-ui` is the preferred path.
 
 `networkPolicy.enabled` defaults to `false`. An earlier version defaulted to `true` with egress targeting label `app.kubernetes.io/name: llama-stack`, which silently blocked all outbound traffic because the llama-stack chart labels pods as `app: llama-stack`.
 
-### `helm/llama-stack-ui`
+### `helm/ogx-ui`
 
-Our custom Streamlit UI (source: `llama-stack-ui/`).
+Our custom Streamlit UI (source: `ogx-ui/`).
 
 | Value | Default | Purpose |
 |-------|---------|---------|

@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: llama-stack-playground
+  name: ogx-ui
   labels:
-    {{- include "llama-stack-playground.labels" . | nindent 4 }}
+    {{- include "ogx-ui.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -16,4 +16,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "llama-stack-playground.selectorLabels" . | nindent 4 }}
+    {{- include "ogx-ui.selectorLabels" . | nindent 4 }}

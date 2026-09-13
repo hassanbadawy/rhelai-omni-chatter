@@ -254,6 +254,25 @@ def chat_page():
                     f"QUERY:\n{prompt}"
                 )
 
+        # --- Input guardrails: NeMo (RHOAI 3.5 / OGX) takes precedence over shields ---
+        guardrails_url = config.get("guardrails_url", "")
+        if config.get("safety_enabled") and guardrails_url:
+            try:
+                violation = client.run_nemo_guardrail(
+                    guardrails_url,
+                    [{"role": "user", "content": input_text}],
+                    config.get("model", ""),
+                    config.get("guardrails_config_id", "guardrail-config"),
+                )
+            except Exception as e:
+                violation = {"user_message": f"Guardrail unreachable: {e}",
+                             "metadata": {"status": "violation"}}
+            if violation:
+                st.error(f"**Input guardrail** blocked: {violation.get('user_message')}")
+                with st.chat_message("assistant"):
+                    st.error("Message blocked by safety guardrails. Please rephrase your message.")
+                return
+
         # --- Input shields check (server-side via Llama Stack) ---
         input_shields = config.get("input_shields", [])
         if config.get("safety_enabled") and input_shields:
@@ -335,6 +354,25 @@ def chat_page():
 
             message_placeholder.markdown(full_response)
             logger.info("Response complete — length=%d", len(full_response))
+
+            # --- Output guardrails: NeMo (RHOAI 3.5 / OGX) ---
+            if config.get("safety_enabled") and guardrails_url and full_response:
+                try:
+                    violation = client.run_nemo_guardrail(
+                        guardrails_url,
+                        [{"role": "user", "content": input_text},
+                         {"role": "assistant", "content": full_response}],
+                        config.get("model", ""),
+                        config.get("guardrails_config_id", "guardrail-config"),
+                    )
+                except Exception as e:
+                    violation = {"user_message": f"Guardrail unreachable: {e}",
+                                 "metadata": {"status": "violation"}}
+                if violation:
+                    message_placeholder.empty()
+                    message_placeholder.error("*Response blocked by safety guardrails.*")
+                    st.error(f"**Output guardrail** blocked: {violation.get('user_message')}")
+                    full_response = "[blocked by output guardrail]"
 
             # --- Output shields check ---
             output_shields = config.get("output_shields", [])

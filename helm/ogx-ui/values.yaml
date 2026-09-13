@@ -2,12 +2,12 @@ replicaCount: 1
 
 image:
   # Default targets the OpenShift internal registry. Build the image first with:
-  #   oc new-build --binary --strategy=docker --name=llama-stack-ui -n <namespace>
-  #   oc patch bc/llama-stack-ui -n <namespace> --type=json \
+  #   oc new-build --binary --strategy=docker --name=ogx-ui -n <namespace>
+  #   oc patch bc/ogx-ui -n <namespace> --type=json \
   #     -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
-  #   oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n <namespace>
+  #   oc start-build ogx-ui --from-dir=./ogx-ui --follow -n <namespace>
   # Or override `image.repository` to point at a public registry image.
-  repository: image-registry.openshift-image-registry.svc:5000/agentic-ivr/llama-stack-ui
+  repository: image-registry.openshift-image-registry.svc:5000/agentic-ivr/ogx-ui
   tag: "latest"
   pullPolicy: Always
 
@@ -53,7 +53,7 @@ ingress:
   className: ""
   annotations: {}
   hosts:
-    - host: llama-stack-ui.local
+    - host: ogx-ui.local
       paths:
         - path: /
           pathType: Prefix
@@ -106,7 +106,7 @@ env:
   STREAMLIT_SERVER_PORT: "8501"
   STREAMLIT_SERVER_ADDRESS: "0.0.0.0"
   STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
-  LLAMA_STACK_UI_DATA_DIR: "/tmp/llama-stack-ui-data"
+  LLAMA_STACK_UI_DATA_DIR: "/tmp/ogx-ui-data"
 
 networkPolicy:
   enabled: false

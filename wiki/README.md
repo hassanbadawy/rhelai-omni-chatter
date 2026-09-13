@@ -74,3 +74,8 @@ python3 scripts/wiki_lint.py
 ```
 
 Semantic checks (does this page actually belong here? is the categorization right?) are not automated — review quarterly.
+
+- [gpu-nodes.md](gpu-nodes.md) — GPU worker nodes on AWS: MachineSet recipe, instance-type selection (MIG needs P-family), capacity triage
+- [odh-dashboard-config.md](odh-dashboard-config.md) — `OdhDashboardConfig` flags: validate against the live CRD; unknown fields are silently pruned
+- [rhoai-maas.md](rhoai-maas.md) — why RHOAI 3.5.0 cannot enable Models-as-a-Service; full prerequisite checklist
+- [nemo-guardrails.md](nemo-guardrails.md) — guardrails on RHOAI 3.5: NeMo is the current path, FMS is legacy

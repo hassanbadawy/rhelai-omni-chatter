@@ -69,7 +69,7 @@ The Karpathy llm-wiki gist (April 2026) has produced a small but active tooling 
 
 ## 2026-05-09 — Wiki bootstrap
 
-The legacy `llama-stack-ui/docs/` and `docs/` were merged into `wiki/`. `findings.md` is a new page; pre-existing dated observations live in [`pitfalls.md`](pitfalls.md), [`decisions.md`](decisions.md), and [`model-benchmarks.md`](model-benchmarks.md). This page collects new dated observations going forward — performance numbers, integration tests, surprising behaviors, regressions.
+The legacy `ogx-ui/docs/` and `docs/` were merged into `wiki/`. `findings.md` is a new page; pre-existing dated observations live in [`pitfalls.md`](pitfalls.md), [`decisions.md`](decisions.md), and [`model-benchmarks.md`](model-benchmarks.md). This page collects new dated observations going forward — performance numbers, integration tests, surprising behaviors, regressions.
 
 Use this page when the observation is **dated and empirical**. Use [`pitfalls.md`](pitfalls.md) when the observation is **a bug with a root cause and fix**. Use [`decisions.md`](decisions.md) when the observation is **a deliberate choice with rationale**.
 

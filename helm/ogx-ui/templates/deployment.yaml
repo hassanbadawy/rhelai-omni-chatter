@@ -2,9 +2,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: llama-stack-playground
+  name: ogx-ui
   labels:
-    {{- include "llama-stack-playground.labels" . | nindent 4 }}
+    {{- include "ogx-ui.labels" . | nindent 4 }}
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"llama-stack"}]'
 spec:
@@ -13,7 +13,7 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "llama-stack-playground.selectorLabels" . | nindent 6 }}
+      {{- include "ogx-ui.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -21,13 +21,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "llama-stack-playground.selectorLabels" . | nindent 8 }}
+        {{- include "ogx-ui.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "llama-stack-playground.serviceAccountName" . }}
+      serviceAccountName: {{ include "ogx-ui.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -45,10 +45,10 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            - name: LLAMA_STACK_ENDPOINT
-              value: {{ .Values.playground.llamaStackUrl | quote }}
+            - name: LLAMA_STACK_API_ENDPOINT
+              value: {{ .Values.ui.llamaStackUrl | quote }}
             - name: DEFAULT_MODEL
-              value: {{ .Values.playground.defaultModel | quote }}
+              value: {{ .Values.ui.defaultModel | quote }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

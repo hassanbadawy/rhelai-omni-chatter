@@ -165,7 +165,7 @@ Expected shields output:
 ### End-to-end shield testing
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 ./tests/test-guardrails.sh    # 18 e2e scenarios
 # Edit tests/test-env.sh to point at different endpoints
 ```

@@ -68,7 +68,7 @@ Each entry answers: what was chosen, what was the alternative, and why.
 
 ## 7. Ship our own UI chart instead of relying on `llama-stack-playground`
 
-**Chosen:** `helm/llama-stack-ui` packages this Streamlit app and is published alongside the upstream `llama-stack-playground` chart.
+**Chosen:** `helm/ogx-ui` packages this Streamlit app and is published alongside the upstream `llama-stack-playground` chart.
 
 **Alternative:** Use only the genaiops `quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix` image (which has its own helm chart in our repo).
 

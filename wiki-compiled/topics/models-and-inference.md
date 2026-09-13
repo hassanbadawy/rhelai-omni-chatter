@@ -111,10 +111,10 @@ The output must include the `vllm/`-prefixed LLM, not just embedding models. If 
 
 ### Pick the model in the UI
 
-The `helm/llama-stack-ui` chart's `ui.defaultModel` value (and the Settings page in the running app) **must use the prefixed identifier**:
+The `helm/ogx-ui` chart's `ui.defaultModel` value (and the Settings page in the running app) **must use the prefixed identifier**:
 
 ```bash
-helm install llama-stack-ui helm/llama-stack-ui/ -n $NS \
+helm install ogx-ui helm/ogx-ui/ -n $NS \
   --set ui.defaultModel="vllm/qwen25-7b-instruct"
 ```
 

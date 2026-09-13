@@ -1,0 +1,37 @@
+# Guardrail LLM: the in-cluster OGX (Llama Stack) endpoint, not a placeholder.
+models:
+  - type: main
+    engine: openai
+    model: vllm-inference-1/redhataiministral-3-3b-instruc
+    api_key_env_var: GUARDRAIL_API_KEY
+    parameters:
+      base_url: "http://lsd-genai-playground-service.genai.svc.cluster.local:8321/v1"
+
+rails:
+  config:
+    # Deterministic Presidio pattern-matching. Does not depend on the LLM,
+    # so PII is blocked reliably even if the guardrail model is slow or down.
+    sensitive_data_detection:
+      input:
+        entities:
+          - EMAIL_ADDRESS
+          - PHONE_NUMBER
+          - CREDIT_CARD
+          - US_SSN
+          - IBAN_CODE
+          - IP_ADDRESS
+      output:
+        entities:
+          - EMAIL_ADDRESS
+          - PHONE_NUMBER
+          - CREDIT_CARD
+          - US_SSN
+          - IBAN_CODE
+  input:
+    flows:
+      - detect sensitive data on input   # deterministic PII
+      - self check input                 # LLM judge: jailbreak / prompt injection
+  output:
+    flows:
+      - detect sensitive data on output  # deterministic PII leak prevention
+      - self check output                # LLM judge: policy violations

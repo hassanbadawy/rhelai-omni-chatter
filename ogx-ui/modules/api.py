@@ -460,6 +460,41 @@ class LlamaStackClient:
         except requests.RequestException:
             return []
 
+    def run_nemo_guardrail(self, guardrails_url, messages, model, config_id="guardrail-config"):
+        """Run a NeMo Guardrails check via /v1/guardrail/checks (RHOAI 3.5 / OGX).
+
+        OGX exposes no safety API at all, so run_shield() 404s against it.
+
+        MUST send guardrails.config_id. Passing an inline `config` is rejected by
+        the server, which still answers HTTP 200 with status "error" and no rails
+        executed -- it fails OPEN and silently enforces nothing.
+
+        Returns a violation dict shaped like run_shield()'s, or None if allowed.
+        """
+        resp = requests.post(
+            f"{guardrails_url.rstrip('/')}/v1/guardrail/checks",
+            json={"model": model, "messages": messages,
+                  "guardrails": {"config_id": config_id}},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        status = data.get("status")
+        rails = data.get("rails_status") or {}
+
+        if status == "error":
+            # Fail CLOSED: an errored check enforced nothing.
+            detail = (data.get("guardrails_data") or {}).get("details") or "guardrail check errored"
+            return {"violation_level": "error",
+                    "user_message": f"Guardrail check failed: {detail}",
+                    "metadata": {"status": "violation", "rails": rails, "check_error": True}}
+        if status == "blocked":
+            blocking = [n for n, r in rails.items() if r.get("status") == "blocked"]
+            return {"violation_level": "error",
+                    "user_message": "Blocked by: " + (", ".join(blocking) or "guardrails"),
+                    "metadata": {"status": "violation", "rails": rails}}
+        return None
+
     def run_shield(self, shield_id, messages):
         """Run a safety shield on messages.
         Returns the violation dict if content is flagged, None if safe.

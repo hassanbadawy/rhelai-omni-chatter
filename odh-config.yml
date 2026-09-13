@@ -1,0 +1,44 @@
+spec:
+  dashboardConfig:
+    disableTracking: false
+    disableModelRegistry: false
+    disableModelCatalog: false
+    disableKServe: false
+    disableKServeMetrics: false
+    disableLMEval: false
+    disablePerformanceMetrics: false
+    disableTrustyBiasMetrics: false
+    genAiStudio: true
+    genAiTracing: true
+    modelAsService: true
+    promptManagement: true
+    automl: true
+    autorag: true
+    gpuaas: true
+    guardrails: true
+    mcpCatalog: true
+    mcpRegistry: true
+    vLLMDeploymentOnMaaS: true
+    llmGatewayField: true
+    observabilityDashboard: true
+    externalModels: true
+    llmdTemplates: true
+    externalVectorStores: true
+    featureStoreAdmin: true
+    agentConfigManagement: true
+    agentOps: true
+    agentsCatalog: true
+    aiAssetCustomEndpoints: true
+    connectionTest: true
+    deploymentWizardYAMLViewer: true
+    trainingJobs: true
+    toolCalling: true
+
+  # externalProviders is NOT a dashboardConfig field - it lives in its own
+  # top-level section as a nested object.
+  genAiStudioConfig:
+    aiAssetCustomEndpoints:
+      externalProviders: true
+      # clusterDomains: ["cluster.local"]   # optional: distinguishes in-cluster
+                                            # services from external providers
+

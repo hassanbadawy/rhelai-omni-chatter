@@ -175,13 +175,13 @@ NS=user1-canopy
 oc new-build --binary --strategy=docker --name=llama-stack-ui -n $NS
 oc patch bc/llama-stack-ui -n $NS --type=json \
   -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
-oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n $NS
+oc start-build llama-stack-ui --from-dir=./ogx-ui --follow -n $NS
 ```
 
 After the build finishes:
 
 ```bash
-helm upgrade --install llama-stack-ui helm/llama-stack-ui/ -n $NS \
+helm upgrade --install llama-stack-ui helm/ogx-ui/ -n $NS \
   --set ui.llamaStackUrl="http://llama-stack-service:8321" \
   --set ui.defaultModel="vllm/qwen25-7b-instruct"
 ```
@@ -189,7 +189,7 @@ helm upgrade --install llama-stack-ui helm/llama-stack-ui/ -n $NS \
 ## Run UI locally (dev)
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 export LLAMA_STACK_API_ENDPOINT="https://llama-stack-${NS}.apps.${CLUSTER_DOMAIN}"
 streamlit run app.py
 # or:
@@ -199,7 +199,7 @@ streamlit run app.py
 ## Test guardrails end-to-end
 
 ```bash
-cd llama-stack-ui
+cd ogx-ui
 ./tests/test-guardrails.sh    # 18 e2e scenarios
 # Edit tests/test-env.sh to point at different endpoints
 ```
@@ -248,7 +248,7 @@ Or drop the shield from `output_shields` in the UI Settings page. See [`findings
 
 ## Debug: file upload silently fails on the upstream playground
 
-Use `helm/llama-stack-ui` instead. The genaiops `0.3.0-fix` image has a `RAGDocument` dict-vs-object bug in `upload.py:59`. See [`architecture.md`](architecture.md) "Why a custom UI".
+Use `helm/ogx-ui` instead. The genaiops `0.3.0-fix` image has a `RAGDocument` dict-vs-object bug in `upload.py:59`. See [`architecture.md`](architecture.md) "Why a custom UI".
 
 ## Release a new helm chart version
 

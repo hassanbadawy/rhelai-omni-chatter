@@ -1,0 +1,82 @@
+---
+# CA bundle so NeMo can verify the model's KServe service-serving cert.
+# The annotation makes OpenShift inject service-ca.crt automatically.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-ca-bundle
+  namespace: genai
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nemo-model-api-key
+  namespace: genai
+stringData:
+  # The model has no auth annotation, so vLLM ignores the Authorization header.
+  # Kept as a secret so enabling auth later is a one-line change.
+  token: "not-required"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-simple-config
+  namespace: genai
+data:
+  config.yaml: |
+    models:
+      - type: main
+        engine: openai
+        model: "redhataiministral-3-3b-instruc"
+        api_key_env_var: "MODEL_API_KEY"
+        parameters:
+          base_url: "https://redhataiministral-3-3b-instruc-kserve-workload-svc.genai.svc:8000/v1"
+    rails:
+      config:
+        sensitive_data_detection:
+          input:
+            entities:
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - CREDIT_CARD
+              - US_SSN
+              - PERSON
+          output:
+            entities:
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - CREDIT_CARD
+              - US_SSN
+      input:
+        flows:
+          - detect sensitive data on input
+      output:
+        flows:
+          - detect sensitive data on output
+  rails.co: |
+    # Built-in sensitive-data-detection rails are driven by config.yaml above.
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemo-simple
+  namespace: genai
+spec:
+  replicas: 1
+  nemoConfigs:
+    - name: nemo-simple-config
+      default: true
+      configMaps:
+        - nemo-simple-config
+  caBundleConfig:
+    configMapName: nemo-ca-bundle
+    configMapKeys:
+      - service-ca.crt
+  env:
+    - name: MODEL_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: nemo-model-api-key
+          key: token

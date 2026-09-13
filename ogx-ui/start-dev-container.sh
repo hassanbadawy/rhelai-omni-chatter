@@ -42,7 +42,7 @@ else
 fi
 
 echo "Starting Streamlit UI..."
-docker run --rm --name llama-stack-ui \
+docker run --rm --name ogx-ui \
   -p 8501:8501 \
   -v "$(pwd)":/app \
   -e LLAMA_STACK_ENDPOINT="${LLAMA_STACK_ENDPOINT}" \

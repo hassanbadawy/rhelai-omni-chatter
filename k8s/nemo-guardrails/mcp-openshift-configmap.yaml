@@ -1,0 +1,17 @@
+# Registers the MCP server with the Gen AI Studio Playground.
+# Shape matters: ONE DATA KEY PER SERVER, value is a JSON object.
+# A single key holding a JSON array, or a config.yaml with an mcp_servers list,
+# both parse to zero servers silently.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-mcp-servers
+  namespace: redhat-ods-applications
+data:
+  openshift-mcp-server: |
+    {
+      "name": "openshift-mcp-server",
+      "url": "http://mcp-openshift.genai.svc:8080/mcp",
+      "description": "Read-only OpenShift/Kubernetes cluster inspection - pods, nodes, events, logs, config",
+      "transport_type": "streamable-http"
+    }

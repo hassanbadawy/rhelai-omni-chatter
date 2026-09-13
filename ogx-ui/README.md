@@ -20,12 +20,12 @@ docker build -f Containerfile -t llama-stack-playground .
 TOGETHER_API_KEY=<your-key> ./start-dev-container.sh --with-api
 ```
 
-This starts the API server container (`llama-stack-api`) on port 8321 and the UI container (`llama-stack-ui`) on port 8501. The UI is available at `http://localhost:8501`.
+This starts the API server container (`llama-stack-api`) on port 8321 and the UI container (`ogx-ui`) on port 8501. The UI is available at `http://localhost:8501`.
 
 To stop both containers:
 
 ```bash
-docker stop llama-stack-ui llama-stack-api
+docker stop ogx-ui llama-stack-api
 ```
 
 ## Developer Setup

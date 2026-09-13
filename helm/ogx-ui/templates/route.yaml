@@ -2,9 +2,9 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: llama-stack-ui
+  name: ogx-ui
   labels:
-    {{- include "llama-stack-ui.labels" . | nindent 4 }}
+    {{- include "ogx-ui.labels" . | nindent 4 }}
   {{- with .Values.route.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -15,7 +15,7 @@ spec:
   {{- end }}
   to:
     kind: Service
-    name: llama-stack-ui
+    name: ogx-ui
     weight: 100
   port:
     targetPort: http

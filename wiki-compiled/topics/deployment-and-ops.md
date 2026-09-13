@@ -13,7 +13,7 @@ Two deploy modes are gated by `guardrails.enabled` on the `llama-stack` chart �
 | Chart | Role | Status / notes |
 |-------|------|----------------|
 | `helm/llama-stack` | Llama Stack distribution (LLM + safety + RAG runtime) | Two modes via `guardrails.enabled`. Operator-managed: chart deploys a `LlamaStackDistribution` CR; the operator creates the Service named `llama-stack-service` (not `llama-stack`). |
-| `helm/llama-stack-ui` | Custom Streamlit UI (built from `llama-stack-ui/`) | Preferred UI. Defaults `ui.llamaStackUrl=http://llama-stack-service:8321`. Image built in-cluster via `oc new-build` using `Containerfile`. |
+| `helm/ogx-ui` | Custom Streamlit UI (built from `ogx-ui/`) | Preferred UI. Defaults `ui.llamaStackUrl=http://llama-stack-service:8321`. Image built in-cluster via `oc new-build` using `Containerfile`. |
 | `helm/llama-stack-playground` | Upstream genaiops Streamlit playground (`quay.io/rhoai-genaiops/llama-stack-playground:0.3.0-fix`) | Standalone, only needs a Llama Stack URL. Has known upload bug (`AttributeError: 'dict' object has no attribute 'content'`) and shields-only-in-Agent-mode bug — prefer `llama-stack-ui`. |
 | `helm/guardrails-orchestrator` | TrustyAI/FMS Guardrails Orchestrator + bundled HF detectors | v0.2.0+ self-contained: each `type: huggingface` detector entry generates its own `Deployment`+`Service` with an `initContainer` that runs `snapshot_download()` into an `emptyDir` at `/mnt/models`. No external `ai501` namespace dependency. |
 | `helm/milvus` | Standalone Milvus vector DB | Optional. Default token `root:Milvus` — `remote::milvus` provider requires a non-empty token field or fails with `Field required`. |
@@ -63,7 +63,7 @@ Internal URLs (only reachable in-cluster):
 
 **Operator-created Service is `llama-stack-service`.** The `llama-stack` chart submits a `LlamaStackDistribution` CR; the `llama-stack-k8s-operator` then generates the Service and names it `<name>-service`, not `<name>`. The `llama-stack-playground` chart originally defaulted `playground.llamaStackUrl=http://llama-stack:8321` — that URL only matches deployment-as-service patterns (helm-only, no operator) and DNS-fails inside the pod (`nslookup llama-stack` exit code 6) on operator installs. Both `llama-stack-playground` and `llama-stack-ui` now default `llamaStackUrl` / `ui.llamaStackUrl` to `http://llama-stack-service:8321` (pitfalls.md #18).
 
-**Wrap genaiops chart bugs in our own chart.** The genaiops `llama-stack-operator-instance` chart only includes `vector_io: remote::milvus` when `.Release.Namespace` contains `"test"` or `"prod"`, leaving custom-named tenants (e.g. `user1-canopy`) with `inline::milvus` and ephemeral RAG state. Our chart replaces this with a simple `milvus.mode={inline,remote}` value, works in any namespace, and always emits a `vector_io` provider when `rag.enabled`. The genaiops `0.3.0-fix` playground image also has a `RAGDocument` dict-vs-object crash on file upload (`upload.py:59` does `doc.content.encode(...)` but the SDK returns a dict). We wrap that by shipping our own UI (`helm/llama-stack-ui`) instead of trying to patch the upstream image (pitfalls.md #19).
+**Wrap genaiops chart bugs in our own chart.** The genaiops `llama-stack-operator-instance` chart only includes `vector_io: remote::milvus` when `.Release.Namespace` contains `"test"` or `"prod"`, leaving custom-named tenants (e.g. `user1-canopy`) with `inline::milvus` and ephemeral RAG state. Our chart replaces this with a simple `milvus.mode={inline,remote}` value, works in any namespace, and always emits a `vector_io` provider when `rag.enabled`. The genaiops `0.3.0-fix` playground image also has a `RAGDocument` dict-vs-object crash on file upload (`upload.py:59` does `doc.content.encode(...)` but the SDK returns a dict). We wrap that by shipping our own UI (`helm/ogx-ui`) instead of trying to patch the upstream image (pitfalls.md #19).
 
 **Use `remote::trusty_fms`, not `remote::passthrough`.** `remote::passthrough` calls `POST /moderations` (OpenAI moderations format). FMS Guardrails Orchestrator exposes `POST /api/v2/text/detection/content` (IBM format). Different request and response schemas — no violations are ever detected if you mismatch them. `remote::trusty_fms` is only available in the custom `quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms` image, which is why our chart switches images when `guardrails.enabled=true` (pitfalls.md #14).
 
@@ -158,9 +158,9 @@ NS=user1-canopy
 oc new-build --binary --strategy=docker --name=llama-stack-ui -n $NS
 oc patch bc/llama-stack-ui -n $NS --type=json \
   -p='[{"op":"add","path":"/spec/strategy/dockerStrategy/dockerfilePath","value":"Containerfile"}]'
-oc start-build llama-stack-ui --from-dir=./llama-stack-ui --follow -n $NS
+oc start-build llama-stack-ui --from-dir=./ogx-ui --follow -n $NS
 
-helm upgrade --install llama-stack-ui helm/llama-stack-ui/ -n $NS \
+helm upgrade --install llama-stack-ui helm/ogx-ui/ -n $NS \
   --set ui.llamaStackUrl="http://llama-stack-service:8321" \
   --set ui.defaultModel="vllm/qwen25-7b-instruct"
 ```
@@ -237,7 +237,7 @@ Commit: `3770ba6` ("Fix LiteMaaS SSO and trust OpenShift service-CA in LiteLLM")
 
 ### 2026-05-09 — Wiki bootstrap into `wiki/`
 
-Legacy `llama-stack-ui/docs/` and `docs/` were merged into the Karpathy-style `wiki/` tree. Operational recipes consolidated into a single [`runbook.md`](../../wiki/runbook.md); deployment-time gotchas accumulated in [`pitfalls.md`](../../wiki/pitfalls.md). Going forward, dated empirical results land in [`findings.md`](../../wiki/findings.md), bug-with-root-cause-and-fix entries in `pitfalls.md`, and architectural choices in `decisions.md`.
+Legacy `ogx-ui/docs/` and `docs/` were merged into the Karpathy-style `wiki/` tree. Operational recipes consolidated into a single [`runbook.md`](../../wiki/runbook.md); deployment-time gotchas accumulated in [`pitfalls.md`](../../wiki/pitfalls.md). Going forward, dated empirical results land in [`findings.md`](../../wiki/findings.md), bug-with-root-cause-and-fix entries in `pitfalls.md`, and architectural choices in `decisions.md`.
 
 ### 2026-05-09 — Guardrails red-team: `language_detection` always trips on English greetings
 

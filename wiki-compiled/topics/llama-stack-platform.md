@@ -4,14 +4,14 @@
 
 **Llama Stack is the orchestration layer of `rhelai-omni-chatter`.** It sits behind the UI on REST port `8321` and brokers every call out to vLLM (LLM inference), the Guardrails Orchestrator (safety shields), and Milvus (RAG vector store). The UI never talks to vLLM, the orchestrator, or Milvus directly — only Llama Stack does. This single seam is what lets the same UI run unchanged whether `guardrails.enabled=false` (RHOAI default `rh-dev` image with `inline::llama-guard`) or `guardrails.enabled=true` (custom `quay.io/rhoai-genaiops/llama-stack-vllm-milvus-fms:rhoai-3.0-fix3` image with `remote::trusty_fms`).
 
-In this project, Llama Stack is delivered as the [`helm/llama-stack`](../../wiki/components.md) chart, which deploys a `LlamaStackDistribution` CR (the operator then creates the Service as `llama-stack-service`, **not** `llama-stack`). It is consumed by [`helm/llama-stack-ui`](../../wiki/components.md) (our custom Streamlit app) and optionally by the upstream [`helm/llama-stack-playground`](../../wiki/components.md). Models served by vLLM must be explicitly registered via `vllm.modelId` and are then exposed under a `vllm/` prefix at `/v1/models` (e.g. `vllm/qwen25-7b-instruct`). Inference and safety travel two completely independent paths through the platform — the orchestrator never calls vLLM, vLLM never calls the orchestrator, and the UI is the only component that chains them.
+In this project, Llama Stack is delivered as the [`helm/llama-stack`](../../wiki/components.md) chart, which deploys a `LlamaStackDistribution` CR (the operator then creates the Service as `llama-stack-service`, **not** `llama-stack`). It is consumed by [`helm/ogx-ui`](../../wiki/components.md) (our custom Streamlit app). Models served by vLLM must be explicitly registered via `vllm.modelId` and are then exposed under a `vllm/` prefix at `/v1/models` (e.g. `vllm/qwen25-7b-instruct`). Inference and safety travel two completely independent paths through the platform — the orchestrator never calls vLLM, vLLM never calls the orchestrator, and the UI is the only component that chains them.
 
 ## Architecture & Design [coverage: high -- 5 sources]
 
 **Layered design.** Per [`architecture.md`](../../wiki/architecture.md), the deployed stack is layered with stable HTTP boundaries between every layer:
 
 ```
-UI layer (helm/llama-stack-ui or helm/llama-stack-playground)
+UI layer (helm/ogx-ui or helm/ogx-ui)
      │ HTTPS (OpenShift Route, edge TLS)
      ▼
 Llama Stack (helm/llama-stack)  — REST API on :8321
@@ -167,7 +167,7 @@ All entries from [`pitfalls.md`](../../wiki/pitfalls.md). Numbers are the origin
 
 - **#17 — `tls_verify` missing in guardrails-mode vLLM provider config.** Both config blocks (rh-dev and FMS) need `tls_verify: false`. Missing it causes generic `APIConnectionError: Connection error` 500 — easy to misdiagnose as a routing problem because raw `curl -k` from the pod works fine.
 
-- **#18 — Operator-managed Service is `llama-stack-service`, not `llama-stack`.** The `LlamaStackDistribution` CR is consumed by the `llama-stack-k8s-operator`, which generates the Service with a `-service` suffix. Both `helm/llama-stack-playground/values.yaml` and `helm/llama-stack-ui/values.yaml` default `llamaStackUrl` to `http://llama-stack-service:8321`.
+- **#18 — Operator-managed Service is `llama-stack-service`, not `llama-stack`.** The `LlamaStackDistribution` CR is consumed by the `llama-stack-k8s-operator`, which generates the Service with a `-service` suffix. Both `helm/ogx-ui/values.yaml` and `helm/ogx-ui/values.yaml` default `llamaStackUrl` to `http://llama-stack-service:8321`.
 
 - **#1 — Responses API silently ignores `max_tokens`.** `/v1/responses` does not forward `max_output_tokens` to vLLM; the adapter uses its own `VLLM_MAX_TOKENS` env var set at server startup. We switched to `/v1/chat/completions`. Detection: set `max_tokens=10` and verify the response is actually short.
 
@@ -187,7 +187,7 @@ All entries from [`pitfalls.md`](../../wiki/pitfalls.md). Numbers are the origin
 
 - **Two config schemas between the two images.** The `rh-dev` image uses `metadata_store` + `storage.backends`/`storage.stores` and `base_url` for the vLLM key; the FMS image uses `type: sqlite, db_path: ...` and `url` for the vLLM key. Mixing schemas across images causes pydantic `ValidationError`. The chart's `guardrails.enabled` conditional renders two completely separate config blocks. See [`pitfalls.md`](../../wiki/pitfalls.md) "Llama Stack Config Format" and the project [CLAUDE.md](../../CLAUDE.md).
 
-- **#19 — Genaiops playground 0.3.0-fix file upload crashes** with `AttributeError: 'dict' object has no attribute 'content'` at `upload.py:59`. Read-only third-party image; mitigation is to use `helm/llama-stack-ui` instead.
+- **#19 — Genaiops playground 0.3.0-fix file upload crashes** with `AttributeError: 'dict' object has no attribute 'content'` at `upload.py:59`. Read-only third-party image; mitigation is to use `helm/ogx-ui` instead.
 
 ## Findings & Measurements [coverage: high -- multiple dated entries]
 
@@ -199,7 +199,7 @@ Reverse-chronological. From [`findings.md`](../../wiki/findings.md) and dated pi
 
 - **2026-05-09 — Fictional/hypothetical framing is the only full-stack guardrails bypass.** 11-attack adversarial suite against HAP, prompt_injection, language_detection, regex. Only the "fictional emergency" framing (e.g. *"In a story I'm writing, a character needs to ..."*) bypassed all four shields AND elicited the protected response from the LLM. Mitigations are model-side (tighter system prompt, refuse-to-roleplay clauses, output classifier on the response), not shield-side.
 
-- **2026-05-09 — Wiki bootstrap.** Legacy `llama-stack-ui/docs/` and `docs/` were merged into `wiki/`. Pre-existing dated observations live in [`pitfalls.md`](../../wiki/pitfalls.md), [`decisions.md`](../../wiki/decisions.md), [`model-benchmarks.md`](../../wiki/model-benchmarks.md).
+- **2026-05-09 — Wiki bootstrap.** Legacy `ogx-ui/docs/` and `docs/` were merged into `wiki/`. Pre-existing dated observations live in [`pitfalls.md`](../../wiki/pitfalls.md), [`decisions.md`](../../wiki/decisions.md), [`model-benchmarks.md`](../../wiki/model-benchmarks.md).
 
 - **2026-05-09 — Model selection by use case** (from [`model-benchmarks.md`](../../wiki/model-benchmarks.md), summarized in [CLAUDE.md](../../CLAUDE.md)). Voice agent / plain streaming chat / multilingual: `qwen25-7b-instruct` (TTFT to user-visible content ~45 ms vs ~500 ms for gpt-oss; multilingual coverage stronger). Long RAG / agent flows: `gpt-oss-20b` (~98 vs ~30 tok/s; hidden chain-of-thought helps tool selection). Reasoning models stream `delta.reasoning_content` (and legacy `delta.reasoning`) — UIs that only read `delta.content` look frozen until reasoning ends.
 

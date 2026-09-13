@@ -491,7 +491,7 @@ Should show three keys: `url`, `api_token`, `tls_verify`.
 
 The `helm/llama-stack-playground` chart originally defaulted `playground.llamaStackUrl` to `http://llama-stack:8321`, which only matches a deployment-as-service pattern (i.e. helm-only, no operator). For operator-managed installs the URL has to be `http://llama-stack-service:8321`.
 
-**Fix:** Both `helm/llama-stack-playground/values.yaml` and `helm/llama-stack-ui/values.yaml` default `llamaStackUrl` / `ui.llamaStackUrl` to `http://llama-stack-service:8321`.
+**Fix:** Both `helm/llama-stack-playground/values.yaml` and `helm/ogx-ui/values.yaml` default `llamaStackUrl` / `ui.llamaStackUrl` to `http://llama-stack-service:8321`.
 
 **How to detect again:** `oc get svc -n <ns> | grep llama-stack` — operator deployments show only `llama-stack-service`, helm-only deployments show `llama-stack`.
 
@@ -605,3 +605,390 @@ helm upgrade llama-stack helm/llama-stack/ -n <ns> --reuse-values \
 The `default-token-<isvc>-sa` secret is reproducible from the InferenceService name, so this is fully scriptable.
 
 **How to detect again:** `helm get values llama-stack -n <ns> | grep -E 'url|modelId'` — if the URL or modelId reference an InferenceService that no longer exists (or is `Stopped`), this is the issue.
+
+## 36. Renaming a MachineSet without renaming its selector labels makes it adopt the original worker Machines
+
+**Symptom:** You copy an existing worker MachineSet with `oc get machineset -o yaml`, change `metadata.name` to something like `cluster-gpu-worker-us-east-2c`, and apply it. Two MachineSets now claim the same Machines; the controller scales and deletes nodes you didn't expect to touch.
+
+**Root cause:** `metadata.name` is only one of *three* places the machineset identity appears. The other two still point at the source MachineSet:
+
+- `spec.selector.matchLabels["machine.openshift.io/cluster-api-machineset"]`
+- `spec.template.metadata.labels["machine.openshift.io/cluster-api-machineset"]`
+
+A MachineSet owns whatever its selector matches. Leaving the selector on `<infra>-worker-<az>` means the new MachineSet's selector matches the *existing* worker Machines, and both controllers fight over them.
+
+**Fix:** Rename all three together. Keep the `<infraID>-` prefix so the name still matches cluster convention:
+```bash
+sed -i '' 's/<infra>-worker-us-east-2c/<infra>-gpu-us-east-2c/g' machineset.yaml
+# then verify exactly 2 label occurrences + 1 metadata.name
+grep -c 'cluster-api-machineset: <infra>-gpu-us-east-2c' machineset.yaml   # must be 2
+```
+
+**How to detect again:** Before applying any derived MachineSet:
+```bash
+oc get machineset <new> -n openshift-machine-api \
+  -o jsonpath='{.metadata.name}{"\n"}{.spec.selector.matchLabels.machine\.openshift\.io/cluster-api-machineset}{"\n"}'
+```
+The two lines must be identical. If they differ, do not apply.
+
+---
+
+## 37. `oc get machineset -o yaml` output is not re-appliable as-is
+
+**Symptom:** Applying a MachineSet exported from a live cluster either errors on `resourceVersion` conflicts or silently carries stale autoscaler capacity hints.
+
+**Root cause:** `oc get -o yaml` emits server-owned fields. These must all be stripped before re-apply:
+
+| Field | Why it must go |
+|---|---|
+| `status:` | Subresource, server-owned |
+| `metadata.managedFields` | Server-side-apply bookkeeping, huge and meaningless in a manifest |
+| `metadata.resourceVersion` | Causes conflict errors on apply |
+| `metadata.uid`, `creationTimestamp`, `generation` | Identity of the *old* object |
+| `metadata.annotations["machine.openshift.io/GPU"]`, `.../vCPU`, `.../memoryMb` | Written by machine-controller-manager from the *source* instance type — stale and misleading after an instanceType change. The controller repopulates them. |
+
+The GPU/vCPU/memoryMb annotations are the sneaky ones: a MachineSet with `instanceType: p5.4xlarge` carrying a stale `machine.openshift.io/GPU: '0'` will mislead the cluster-autoscaler about the node's capacity.
+
+**Fix:** Strip all of the above. Keep `spec`, `metadata.name`, `metadata.namespace`, `metadata.labels`.
+
+**How to detect again:** `grep -E 'managedFields|resourceVersion|uid:|^status:' machineset.yaml` must return nothing.
+
+---
+
+## 38. `InsufficientInstanceCapacity` leaves Machines in `Provisioning` forever, and the suggested AZs are boilerplate
+
+**Symptom:** MachineSet reports `DESIRED 2 / CURRENT 2 / READY 0`. Machines sit in `Provisioning` indefinitely with empty `TYPE`, `ZONE`, and `PROVIDERID`. No node joins, and the phase never becomes `Failed`.
+
+**Root cause:** The AWS machine controller retries `RunInstances` every ~3s forever on a capacity error. There is no terminal failure state and no backoff ceiling, so the MachineSet looks "in progress" indefinitely rather than erroring out. `oc get machines` alone tells you nothing — the reason is only in events.
+
+The error text is actively misleading:
+```
+InsufficientInstanceCapacity: We currently do not have sufficient p5.4xlarge
+capacity in the Availability Zone you requested (us-east-2c). ... You can
+currently get p5.4xlarge capacity by ... choosing us-east-2a, us-east-2b.
+```
+Requesting `us-east-2b` then returns the identical error suggesting `us-east-2a, us-east-2c`. **The suggestion list is simply the complement of the AZ you asked for** — it is not a capacity signal. Do not burn time chasing zones on the strength of it.
+
+**Fix / triage:** Read the actual reason, and distinguish capacity from quota:
+```bash
+oc get events -n openshift-machine-api --field-selector reason=FailedCreate \
+  -o jsonpath='{range .items[*]}{.lastTimestamp}{" | "}{.message}{"\n"}{end}' | tail -3
+```
+| Error code | Meaning | Action |
+|---|---|---|
+| `InsufficientInstanceCapacity` | AWS has no hardware | Nothing you can do; needs a Capacity Reservation / Capacity Blocks for ML, or a different instance family |
+| `VcpuLimitExceeded` | Account service quota | Raise the quota via AWS support |
+| `Unsupported` | Type not offered in that AZ | Move AZ (this one *is* a real zone signal) |
+
+Also note `replicas: N` is **not** atomic — each Machine gets its own independent `RunInstances` call, so a partially-available capacity pool will fill some replicas and keep retrying the rest. Scaling down to improve "odds" does nothing.
+
+**How to detect again:** Any Machine in `Provisioning` with no `PROVIDERID` after ~2 minutes is not provisioning — check events immediately.
+
+---
+
+## 39. MIG is not available on any G-family AWS GPU instance
+
+**Symptom:** You plan a GPU-as-a-Service setup with MIG partitioning, hit no capacity on P-family instances, and "fall back" to a cheaper `g5`/`g6` instance. MIG then cannot be enabled at all — the NVIDIA GPU Operator won't expose `nvidia.com/mig-*` resources and `nvidia-smi mig -lgip` reports the GPU does not support MIG.
+
+**Root cause:** MIG requires a **data-center GPU of Ampere generation or newer**: A100, A30, H100, H200, B200. It is a hardware feature, not a driver setting. The GPUs in AWS's cheap GPU instances are all excluded:
+
+| AWS instance | GPU | MIG? |
+|---|---|---|
+| `g4dn.*` | T4 (Turing) | No |
+| `g5.*` | A10G (Ampere, but not data-center SKU) | **No** |
+| `g6.*` | L4 (Ada) | **No** |
+| `g6e.*` | L40S (Ada) | **No** |
+| `p4d.24xlarge` | 8× A100 40GB | Yes — 56 slices |
+| `p4de.24xlarge` | 8× A100 80GB | Yes — 56 slices |
+| `p5.4xlarge` | 1× H100 80GB | Yes — 7 slices |
+| `p5.48xlarge` | 8× H100 80GB | Yes — 56 slices |
+
+A10G and L4 are Ampere/Ada silicon, which makes the "Ampere or newer" phrasing dangerously easy to misread — generation alone is not sufficient, it must be a data-center SKU.
+
+**Consequence:** If the requirement is MIG, the *only* AWS options are P-family. `p5.4xlarge` (~$6.88/hr) is the cheapest MIG-capable instance AWS sells; `p4d.24xlarge` (~$21.96/hr, A100) is the usual fallback because a generation-older GPU has far better capacity availability.
+
+**How to detect again:** Before choosing any GPU instance type for a MIG workload, check the GPU model against NVIDIA's supported list — <https://docs.nvidia.com/datacenter/tesla/mig-user-guide/supported-gpus.html>. Never substitute a G-family instance into a MIG plan on cost grounds.
+
+---
+
+## 40. Editing a MachineSet's template does NOT change existing Machines
+
+**Symptom:** You patch a MachineSet's `instanceType`, `availabilityZone`, or subnet to work around a provisioning failure, wait, and see the *identical* error still naming the old value. It looks like the patch was ignored.
+
+**Root cause:** A MachineSet is not a Deployment — it has **no rollout controller**. `spec.template` is only a stamp used when creating *new* Machines. Existing Machine objects carry their own frozen copy of `spec.providerSpec`, and nothing ever reconciles them back toward the template.
+
+So a Machine stuck retrying `RunInstances` keeps retrying with its **original** spec forever, no matter how many times you patch the parent MachineSet. Observed directly:
+
+```
+MachineSet template AZ: us-east-2c     # patched
+Machine  ...-kvcxt AZ:  us-east-2b     # still launching here
+Machine  ...-xm8sm AZ:  us-east-2b     # still launching here
+```
+
+**Fix:** Delete the Machines so the MachineSet recreates them from the new template. Safe when no EC2 instance was ever created (nothing to destroy):
+
+```bash
+oc patch machineset <name> -n openshift-machine-api --type=merge -p '{...}'
+oc delete machine -n openshift-machine-api \
+  -l machine.openshift.io/cluster-api-machineset=<name>
+```
+
+For Machines that *do* back a running node, scale down / cordon+drain instead of deleting blindly.
+
+**How to detect again:** After any MachineSet patch, compare template against the actual Machines — never trust the template alone:
+```bash
+oc get machineset <name> -n openshift-machine-api \
+  -o jsonpath='{.spec.template.spec.providerSpec.value.placement.availabilityZone}{"\n"}'
+for m in $(oc get machines -n openshift-machine-api -o name | grep <name>); do
+  oc get $m -o jsonpath='{.metadata.name}{" "}{.spec.providerSpec.value.placement.availabilityZone}{"\n"}'
+done
+```
+If they disagree, your patch is not being tested.
+
+---
+
+## 41. Unknown `OdhDashboardConfig` fields are pruned with a warning, so the feature silently never turns on
+
+**Symptom:** You add dashboard feature flags, apply, and get an admission *warning* (not an error):
+```
+OdhDashboardConfig odh-dashboard-config violates policy 299 -
+  "unknown field \"spec.dashboardConfig.Gpuaas\"",
+  "unknown field \"spec.dashboardConfig.Guardrails\"",
+  "unknown field \"spec.dashboardConfig.aiAssetCustomEndpoints.externalProviders\""
+```
+The resource applies "successfully" and the features stay off.
+
+**Root cause:** This is API-server field pruning, not a rejection. Unknown fields are stripped before persistence, so the CR is stored *without* them. Nothing fails and nothing retries — the setting simply never existed. Three distinct causes produced the warning above:
+
+1. **Case sensitivity.** CRD field names are lowercase; YAML keys are case-sensitive. `Gpuaas` ≠ `gpuaas`, `Guardrails` ≠ `guardrails`, `Mlflow` ≠ `mlflow`.
+2. **Dots in YAML keys are not paths.** `aiAssetCustomEndpoints.externalProviders: true` does not mean "nested field" — it creates one literal key with a dot in its name.
+3. **Same name, two different fields.** `spec.dashboardConfig.aiAssetCustomEndpoints` is a **boolean** (turn feature on); `spec.genAiStudioConfig.aiAssetCustomEndpoints` is an **object** holding `externalProviders` and `clusterDomains` (configure it). Both are required — the boolean alone does nothing for external providers.
+
+**Fix:** Validate every key against the **live CRD**, which is authoritative and version-specific — the docs page lags and its true/false phrasing is ambiguous:
+```bash
+oc get crd odhdashboardconfigs.opendatahub.io \
+  -o jsonpath='{.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.dashboardConfig.properties}' \
+  | python3 -c 'import json,sys; [print(k) for k in sorted(json.load(sys.stdin))]'
+```
+Descriptions and deprecations live there too — e.g. `mlflow` is marked *"DEPRECATED: MLflow is now always enabled when the operator component is present."*
+
+**Semantics** (confirmed from CRD descriptions, RHOAI 3.5.0):
+
+| Field shape | `true` means |
+|---|---|
+| `disableX` | feature **off** |
+| plain feature flag (`gpuaas`, `guardrails`, `genAiStudio`, …) | feature **on** |
+
+The docs sentence "to show features set the value to `false`" applies **only to the `disable*` family** — applying it to `gpuaas` inverts your intent.
+
+**How to detect again:** Never trust a clean apply. Read the field back — a pruned field returns empty:
+```bash
+oc get odhdashboardconfig odh-dashboard-config -n redhat-ods-applications \
+  -o jsonpath='{.spec.dashboardConfig.gpuaas}{"\n"}'
+```
+Empty output = pruned, feature off. Treat any `violates policy 299 - "unknown field ..."` warning as a hard failure.
+
+---
+
+## 42. RHOAI 3.5.0 cannot enable Models-as-a-Service — both paths are blocked
+
+**Symptom:** Following the official MaaS guide on RHOAI 3.5.0, `maas-api` never deploys and `redhat-ai-gateway-infra` stays empty, even with `aigateway.modelsAsAService: Managed` in the DSC.
+
+**Root cause:** 3.5.0 deprecated the 3.4-era wiring *and* ships without its replacement, leaving no working path:
+
+1. **Legacy path blocked by CEL.** The docs ([3.4](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/deploy-and-manage-models-as-a-service_maas)) say `spec.components.kserve.modelsAsService.managementState: Managed`. On 3.5.0:
+   ```
+   modelsAsService is deprecated; cannot re-enable once Removed.
+   Use spec.components.aigateway.modelsAsAService instead
+   ```
+   The CRD description spells out the rule: *"One-directional CEL: Managed→Removed (cleanup) is allowed; Removed→Managed is blocked."* A cluster **upgraded** from 3.4 with it already `Managed` keeps working; a fresh 3.5.0 install can never turn it on.
+
+2. **New path has no CRD.** Setting `aigateway.managementState: Managed` yields:
+   ```
+   AIGatewayReady = False | NotReady: Failed to get module status:
+     no matches for kind "AIGateway" in version "components.platform.opendatahub.io/v1alpha1"
+   ```
+   This is not a broken install — the catalog bundle never had it:
+   ```bash
+   oc get packagemanifest rhods-operator -n openshift-marketplace -o json | python3 -c "
+   import json,sys
+   d=json.load(sys.stdin)
+   for ch in d['status']['channels']:
+       if ch['name']=='stable-3.x':
+           print([c['kind'] for c in ch['currentCSVDesc']['customresourcedefinitions']['owned']])"
+   ```
+   Returns 16 kinds (Auth, DataScienceCluster, GatewayConfig, Kueue, Trainer, TrustyAI, …) with **no AIGateway**, while all 14 sibling component CRDs are installed.
+
+3. **Dashboard flag also deprecated.** `maasAuthPolicies`, required by the 3.4 docs, is rejected: *"DEPRECATED: spec.dashboardConfig.maasAuthPolicies must be removed or left unchanged."*
+
+Confirming signal: the **3.5 MaaS doc page 404s** — it exists only for 3.3 and 3.4.
+
+**The trap:** `spec.components.aigateway` has *three* independent fields — `managementState` (the module), `modelsAsAService`, and `batchGateway`. Setting only the submodule leaves the parent unset, which **defaults to `Removed`**, so the whole module is off and the condition reads `Module ManagementState is set to Removed`. That misleads you into thinking the submodule value is wrong, when the real problem is one level up — and fixing it only surfaces the missing CRD.
+
+**Fix:** None on 3.5.0. Use an RHOAI build that ships the AI Gateway component, or a 3.4 cluster where the kserve path is still permitted. Everything else (GatewayClass, `maas-default-gateway`, RHCL, PostgreSQL, UWM) can be fully prepared in advance and is not the blocker.
+
+**How to detect again:** Before following any MaaS guide, check the component CRD exists — one command, saves hours:
+```bash
+oc get crd aigateways.components.platform.opendatahub.io
+```
+`NotFound` means MaaS cannot be enabled on that cluster regardless of DSC settings.
+
+**Caution:** patching `aigateway.managementState: Managed` when the CRD is absent flips the whole DSC to `Ready=False / Some modules are not ready: aigateway`. Revert by removing the key (not by setting it to `Removed`, which is not the original state):
+```bash
+oc patch $(oc get dsc -o name|head -1) --type=json \
+  -p '[{"op":"remove","path":"/spec/components/aigateway/managementState"}]'
+```
+
+---
+
+## 43. A Gateway with a `*.apps` wildcard hostname hijacks the cluster's wildcard DNS and takes down every route
+
+**Symptom:** After creating a Gateway, unrelated cluster URLs break — the OpenShift console, the RHOAI dashboard, everything on `*.apps` — returning HTTP 404 from an unexpected load balancer. Later, after "fixing" the Gateway, those hostnames stop resolving at all.
+
+**Root cause:** **Every OpenShift Gateway publishes its own `DNSRecord`.** Creating a Gateway whose listener hostname is `*.apps.<cluster-domain>` publishes a Route53 CNAME for that exact name — which is the name the ingress operator's `default-wildcard` record already owns. The Gateway's record **overwrites** it, so all `*.apps` traffic is sent to the new Gateway's ELB, which 404s anything it has no HTTPRoute for.
+
+The second failure is worse. Narrowing the Gateway hostname afterwards deletes the colliding record, and because both records shared one zone entry, the wildcard CNAME is removed **entirely** — `*.apps` then resolves to nothing. The ingress operator's CR still reports `Published=True ProviderSuccess`, so the status lies; only a live DNS query reveals it.
+
+Diagnosis — compare what the hostname resolves to against the Gateway ELBs:
+```bash
+dig +short rh-ai.apps.<cluster-domain>                      # hijacked hostname
+dig +short <gateway-elb>.us-east-2.elb.amazonaws.com        # the offending Gateway
+oc get svc router-default -n openshift-ingress \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'  # the correct target
+oc get dnsrecord -A     # one "<gateway>-wildcard" record per Gateway
+```
+If the hostname's IPs match a Gateway's ELB instead of `router-default`'s, that Gateway has hijacked it.
+
+**Fix:**
+1. Scope the Gateway listener to a specific hostname — never a wildcard:
+   ```bash
+   oc patch gateway <name> -n openshift-ingress --type=json \
+     -p '[{"op":"replace","path":"/spec/listeners/0/hostname","value":"inference.apps.<cluster-domain>"}]'
+   ```
+2. Force the ingress operator to re-publish the wildcard it owns:
+   ```bash
+   oc delete dnsrecord default-wildcard -n openshift-ingress-operator
+   ```
+   The operator recreates it within seconds from `router-default`'s ELB.
+3. Verify against a public resolver, **not** your local one:
+   ```bash
+   dig +short @8.8.8.8 console-openshift-console.apps.<cluster-domain>
+   ```
+
+**The outage outlives the fix.** While the record was missing, every resolver that
+looked it up cached the NXDOMAIN. Per RFC 2308 the negative-cache lifetime is
+`min(SOA TTL, SOA minimum)`; on these clusters that is `min(900, 86400)` = **15
+minutes**. So browsers keep reporting `DNS_PROBE_POSSIBLE` for up to 15 minutes
+*after* DNS is correct, which reads exactly like the fix failed. Check the SOA
+before concluding anything is still broken:
+```bash
+dig +noall +authority @8.8.8.8 nonexistent.apps.<cluster-domain> SOA
+```
+Clear it with `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`, plus
+`chrome://net-internals/#dns` → Clear host cache (Chrome caches separately from the
+OS), or test from a phone on cellular to bypass every cache at once.
+
+**How to detect again / prevent:** Before creating any Gateway, derive the hostname from what the consumer already publishes rather than inventing one. For an `LLMInferenceService`, `status.url` and `status.addresses` name it exactly:
+```bash
+oc get llminferenceservice <name> -n <ns> -o jsonpath='{.status.url}{"\n"}'
+# https://inference.apps.<cluster-domain>/<ns>/<name>   -> hostname is inference.apps.<cluster-domain>
+```
+**Never put `*.apps.<cluster-domain>` on a Gateway listener.** Use `allowedRoutes.namespaces.from: All` if cross-namespace attachment is what you need — that is the knob for route scope; the hostname is not.
+
+---
+
+## 44. vLLM crash-loops when a model's default context exceeds the GPU's KV cache
+
+**Symptom:** An `LLMInferenceService` pod sits in `CrashLoopBackOff` indefinitely (observed: 616 restarts over 2.5 days). The `main` container exits during engine startup with a generic tail:
+```
+RuntimeError: Engine core initialization failed. See root cause above.
+```
+The real cause is ~40 lines earlier and easy to miss:
+```
+ValueError: To serve at least one request with the model's max seq len (262144),
+26.0 GiB KV cache is needed, which is larger than the available KV cache memory
+(14.79 GiB). Based on the available memory, the estimated maximum model length
+is 149104.
+```
+
+**Root cause:** vLLM sizes the KV cache for the model's *full advertised* context. Ministral-3B declares 262144 tokens; on a 24 GB A10G only ~14.79 GiB is left for KV after weights and CUDA graphs, so the engine refuses to start. Nothing about this is visible from `oc get pods` — only the previous container's log shows it.
+
+**Fix:** Cap the context. Do **not** set `spec.template.containers[0].args` — the RHOAI serving template builds a long `vllm serve` command (served-model-name, TLS certs, version-conditional flags) and ends with `${VLLM_ADDITIONAL_ARGS} $@`, so args are the documented extension point:
+```bash
+oc patch llminferenceservice <name> -n <ns> --type=json \
+  -p '[{"op":"add","path":"/spec/template/containers/0/env","value":[
+        {"name":"VLLM_ADDITIONAL_ARGS","value":"--max-model-len 32768"}]}]'
+```
+Verify from inside the pod — `max_model_len` is reported per model:
+```bash
+oc exec -n <ns> <pod> -c main -- curl -sk https://localhost:8000/v1/models
+```
+
+**How to detect again:** Any GPU model stuck in `CrashLoopBackOff` — go straight to
+`oc logs <pod> -c main --previous | grep -B2 ValueError`. The error names the largest
+context that *would* fit, so pick a round number below it.
+
+---
+
+## 45. `LLMInferenceService` reports `RefsInvalid` because the KServe ingress Gateway does not exist
+
+**Symptom:** A model deploys but never becomes Ready:
+```
+HTTPRoutesReady False | RefsInvalid: Managed HTTPRoute references non-existent
+  Gateway openshift-ingress/openshift-ai-inference
+```
+
+**Root cause:** KServe points every managed HTTPRoute at whatever `inferenceservice-config` names, and nothing creates it:
+```bash
+oc get cm inferenceservice-config -n redhat-ods-applications \
+  -o jsonpath='{.data.ingress}' | python3 -m json.tool | grep kserveIngressGateway
+#   "kserveIngressGateway": "openshift-ingress/openshift-ai-inference"
+```
+The KServe component reports `Ready=True` and `AllResourcesApplied` while this Gateway is absent — it is expected to pre-exist, and its absence is only visible on the individual service.
+
+**Fix:** Create the Gateway with the **exact hostname the service already publishes** — never a wildcard (see pitfall #32):
+```bash
+oc get llminferenceservice <name> -n <ns> -o jsonpath='{.status.url}{"\n"}'
+# https://inference.apps.<domain>/<ns>/<name>  ->  hostname is inference.apps.<domain>
+```
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata: {name: openshift-ai-inference, namespace: openshift-ingress}
+spec:
+  gatewayClassName: openshift-default
+  listeners:
+    - name: https
+      hostname: inference.apps.<cluster-domain>   # specific, never *.apps
+      port: 443
+      protocol: HTTPS
+      allowedRoutes: {namespaces: {from: All}}     # this is the cross-namespace knob
+      tls:
+        mode: Terminate
+        certificateRefs: [{group: "", kind: Secret, name: cert-manager-ingress-cert}]
+```
+`HTTPRoutesReady` and `RouterReady` flip to True within seconds.
+
+---
+
+## 46. `oc get nemoguardrails` returns the wrong resource — two CRDs share the short name
+
+**Symptom:** You create a `NemoGuardrails` CR, the pod runs fine, but:
+```
+$ oc get nemoguardrails -n <ns>
+No resources found in <ns> namespace.
+```
+
+**Root cause:** Two CRDs claim that short name on a RHOAI 3.5 cluster:
+```
+nemoguardrails.apps.nvidia.com
+nemoguardrails.trustyai.opendatahub.io
+```
+The bare name resolves to NVIDIA's, which has no instances, so the RHOAI resource looks like it failed to create when it is actually healthy.
+
+**Fix:** Always fully qualify:
+```bash
+oc get nemoguardrails.trustyai.opendatahub.io -n <ns>
+```
+
+**How to detect again:** `oc get crd | grep nemoguardrails` — if two lines come back, every bare-name command is ambiguous. Applies to `describe`, `delete` and `patch` too.
