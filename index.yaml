@@ -3,9 +3,9 @@ entries:
   anythingllm:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T18:25:24.47569842Z'
-    description: "AnythingLLM \u2014 all-in-one AI app with RAG, agents, and multi-user\
-      \ support on OpenShift"
+    created: "2026-03-21T18:25:24.47569842Z"
+    description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user
+      support on OpenShift
     digest: 36b6b3df7eae4684e260a159accb1939dea73db6543b5303a64afaa5e2e7e4b5
     icon: https://avatars.githubusercontent.com/u/132292527
     keywords:
@@ -24,9 +24,9 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T18:18:29.788591904Z'
-    description: "AnythingLLM \u2014 all-in-one AI app with RAG, agents, and multi-user\
-      \ support on OpenShift"
+    created: "2026-03-21T18:18:29.788591904Z"
+    description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user
+      support on OpenShift
     digest: d4ebf1021692e87c5f38c9eaef56bf08f358adc50d6c1730445d26d0944bc8cc
     icon: https://avatars.githubusercontent.com/u/132292527
     keywords:
@@ -45,9 +45,9 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T18:12:32.031965935Z'
-    description: "AnythingLLM \u2014 all-in-one AI app with RAG, agents, and multi-user\
-      \ support on OpenShift"
+    created: "2026-03-21T18:12:32.031965935Z"
+    description: AnythingLLM — all-in-one AI app with RAG, agents, and multi-user
+      support on OpenShift
     digest: 6a4b6be05d829677b8c4c4c54b0cc148b2e53e42a88bc30abd9cb90bb84d16ea
     icon: https://avatars.githubusercontent.com/u/132292527
     keywords:
@@ -67,7 +67,7 @@ entries:
   dashy:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-22T22:31:32.013948824Z'
+    created: "2026-03-22T22:31:32.013948824Z"
     description: Dashy dashboard with workspace view for managing AI platform services
       on OpenShift
     digest: 0f0106e42577ea570189ae686ca901e746cbc4dc7006f91bb81e1207b455ac0a
@@ -86,7 +86,7 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-22T22:19:00.839929404Z'
+    created: "2026-03-22T22:19:00.839929404Z"
     description: Dashy dashboard with workspace view for managing AI platform services
       on OpenShift
     digest: 79d4ff207f4edfb47458e3d42e88ef6a11c5aa78ca1a92972fab41eabeeada68
@@ -105,7 +105,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T16:14:56.031985096Z'
+    created: "2026-03-21T16:14:56.031985096Z"
     description: Dashy dashboard with workspace view for managing AI platform services
       on OpenShift
     digest: 60e2ce45c455db522277aabc43b59da016a78b913cec0585b614c1bf3ee5154c
@@ -124,7 +124,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T15:49:29.529413169Z'
+    created: "2026-03-21T15:49:29.529413169Z"
     description: Dashy dashboard with workspace view for managing AI platform services
       on OpenShift
     digest: b21407476f2267be66817009705d3dc96188c0948b4f493d8dc6162553562ce8
@@ -144,9 +144,9 @@ entries:
   docling-serve:
   - apiVersion: v2
     appVersion: 0.7.0
-    created: '2026-03-25T00:50:46.600499+03:00'
-    description: "Docling Serve \u2014 GPU-accelerated document conversion service\
-      \ (PDF, DOCX, images to markdown/JSON) for RAG pipelines"
+    created: "2026-03-25T00:50:46.600499+03:00"
+    description: Docling Serve — GPU-accelerated document conversion service (PDF,
+      DOCX, images to markdown/JSON) for RAG pipelines
     digest: 78ef72a47f2cd090c2ade1b9788f390ebd676623ec6b30a393a4ce7d22ae4cd5
     icon: https://avatars.githubusercontent.com/u/151674099
     keywords:
@@ -165,8 +165,8 @@ entries:
     version: 0.1.0
   gitea:
   - apiVersion: v2
-    appVersion: '1.21'
-    created: '2026-03-29T18:49:22.702930565Z'
+    appVersion: "1.21"
+    created: "2026-03-29T18:49:22.702930565Z"
     description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
     digest: 588b437084c9f91c70e0e57b91066b88a726b8cdfe3b252982dbf3ec9b31f3d6
     icon: https://about.gitea.com/gitea.png
@@ -183,8 +183,8 @@ entries:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/gitea-0.4.0/gitea-0.4.0.tgz
     version: 0.4.0
   - apiVersion: v2
-    appVersion: '1.21'
-    created: '2026-03-29T18:20:03.025730582Z'
+    appVersion: "1.21"
+    created: "2026-03-29T18:20:03.025730582Z"
     description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
     digest: 2fdc9df06afc93818a972fc0a86ae5ca37b388c25d7c51db2fcc943054755232
     icon: https://about.gitea.com/gitea.png
@@ -201,8 +201,8 @@ entries:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/gitea-0.3.0/gitea-0.3.0.tgz
     version: 0.3.0
   - apiVersion: v2
-    appVersion: '1.21'
-    created: '2026-03-29T18:15:04.335785917Z'
+    appVersion: "1.21"
+    created: "2026-03-29T18:15:04.335785917Z"
     description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
     digest: ba039a5e8e0749ecbe47a605243d52864dcaed099bf1fc7432c5f0c389d0f677
     icon: https://about.gitea.com/gitea.png
@@ -219,8 +219,8 @@ entries:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/gitea-0.2.0/gitea-0.2.0.tgz
     version: 0.2.0
   - apiVersion: v2
-    appVersion: '1.21'
-    created: '2026-03-29T17:58:36.433738618Z'
+    appVersion: "1.21"
+    created: "2026-03-29T17:58:36.433738618Z"
     description: Gitea Git server deployed via the rhpds/gitea-operator on OpenShift
     digest: 461c0004e10bf5dfeb4b08335ddbf4508c1461016bfeb7c768ba33607fbb40b8
     icon: https://about.gitea.com/gitea.png
@@ -239,7 +239,7 @@ entries:
   guardrails-orchestrator:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-06T00:00:43.62239399Z'
+    created: "2026-05-06T00:00:43.62239399Z"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
     digest: 107d10ceda5373d55a68a972d31b875b475e179e40ee5c0ec94f7b40bd1bde8b
@@ -260,7 +260,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-05-06T01:39:59.326004+03:00'
+    created: "2026-05-06T01:39:59.326004+03:00"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
     digest: 146da66d3d26eb019f1edb5cad3b2fb3e4a89bd34f318711b06f962656c87114
@@ -281,7 +281,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-03-25T00:50:46.60087+03:00'
+    created: "2026-03-25T00:50:46.60087+03:00"
     description: FMS Guardrails Orchestrator for content safety on OpenShift (HAP,
       prompt injection, language detection, regex, custom detectors)
     digest: c03a965ec15276faf8033ed87e59891b752641f0af232c868f21d4716fb153b4
@@ -303,7 +303,7 @@ entries:
   langflow:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T16:14:56.14343829Z'
+    created: "2026-03-21T16:14:56.14343829Z"
     description: Visual LLM flow builder for creating and deploying AI workflows on
       OpenShift
     digest: 4897c954cadae2a0b7578efd7b01f85bf430e826974a8b1137712f80747c6bad
@@ -322,7 +322,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T15:49:29.627930004Z'
+    created: "2026-03-21T15:49:29.627930004Z"
     description: Visual LLM flow builder for creating and deploying AI workflows on
       OpenShift
     digest: e80b9b3d155423c34f0ac1689054d747c578b3a14bb141182541da9bbca3cff0
@@ -342,7 +342,7 @@ entries:
   litemaas:
   - apiVersion: v2
     appVersion: 0.4.0
-    created: '2026-03-29T01:41:20.17824+03:00'
+    created: "2026-03-29T01:41:20.17824+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
     digest: e8b84fde4401a411930a15830e097965da915b714424a30357a3c4d1201721e7
@@ -361,7 +361,7 @@ entries:
     version: 0.1.3
   - apiVersion: v2
     appVersion: 0.4.0
-    created: '2026-03-29T01:41:20.177574+03:00'
+    created: "2026-03-29T01:41:20.177574+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
     digest: 71362fcf8bf18954bedb4311bc6e30856ab26784d5e815b6a06e48079bab4492
@@ -380,7 +380,7 @@ entries:
     version: 0.1.2
   - apiVersion: v2
     appVersion: 0.4.0
-    created: '2026-03-29T01:41:20.176699+03:00'
+    created: "2026-03-29T01:41:20.176699+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
     digest: ea0999945751806ca246630628bd40c709b3f5a4df6736dcd684edbe33d34c32
@@ -399,7 +399,7 @@ entries:
     version: 0.1.1
   - apiVersion: v2
     appVersion: 0.4.0
-    created: '2026-03-25T00:50:46.601628+03:00'
+    created: "2026-03-25T00:50:46.601628+03:00"
     description: LiteMaaS - Model subscription and management platform with LiteLLM
       integration
     digest: e8cd66e6418b1b39e0dbf2c057c7fb0b4d0b1860da1a47efbec75a2e8536919a
@@ -419,7 +419,7 @@ entries:
   llama-stack:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-07-06T12:10:32.043507327Z'
+    created: "2026-07-06T12:10:32.043507327Z"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
     digest: f87430b66f9fcec653b21754bffa7fdc65acef46f22ff4e95166b4ff387e9fa6
@@ -441,7 +441,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-03-24T05:41:47.187549+03:00'
+    created: "2026-03-24T05:41:47.187549+03:00"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
     digest: 04ebc8d04d267645ea5a594f4d77f085023967e44237973aa5b956066f8d01d4
@@ -463,7 +463,7 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-03-22T17:40:14.948015583Z'
+    created: "2026-03-22T17:40:14.948015583Z"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
     digest: cc581f3bb53db409c1c89c8ea36e2f9678b3e681880e8a3bb1a80c31b9f95068
@@ -485,7 +485,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-03-21T16:14:56.234298007Z'
+    created: "2026-03-21T16:14:56.234298007Z"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
     digest: 98d3b2677e7744bb7dc62e4b849a7a4d173370d224fff391fd070d046dab8053
@@ -507,7 +507,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 1.0.0
-    created: '2026-03-21T15:49:29.75919966Z'
+    created: "2026-03-21T15:49:29.75919966Z"
     description: Llama Stack on OpenShift via RHOAI operator (rh-dev distribution
       with SQLite storage, vLLM inference)
     digest: a6d7159df0c603221cbfb965eccfeed347d0ae121bf2d088a236474ae93a2465
@@ -530,7 +530,7 @@ entries:
   locate-anything:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-07-08T20:41:49.674918+03:00'
+    created: "2026-07-08T20:41:49.674918+03:00"
     description: NVIDIA LocateAnything-3B spatial-grounding vision model via NIM container
       on OpenShift
     digest: 97da46b24deef6334ecbcd1c4d0613d58caed71172fd54727efa440546d2816a
@@ -551,8 +551,8 @@ entries:
     version: 0.1.0
   milvus:
   - apiVersion: v2
-    appVersion: '2.4'
-    created: '2026-03-22T01:37:40.528667146Z'
+    appVersion: "2.4"
+    created: "2026-03-22T01:37:40.528667146Z"
     dependencies:
     - name: milvus
       repository: https://zilliztech.github.io/milvus-helm/
@@ -577,7 +577,7 @@ entries:
   minio:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-22T01:33:58.588227488Z'
+    created: "2026-03-22T01:33:58.588227488Z"
     description: MinIO S3-compatible object storage for AI model weights and data
       on OpenShift
     digest: 18feba75f89b296366116cb7aeb8f85d32a8f424354894a2ce83f304b21445bb
@@ -597,7 +597,7 @@ entries:
   n8n:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T16:14:56.339165497Z'
+    created: "2026-03-21T16:14:56.339165497Z"
     description: n8n workflow automation platform for AI and integration workflows
       on OpenShift
     digest: d21b78f33f693d783bdf89fa2996b67c94622f44c6feb74dc08aa30f3a68efed
@@ -617,7 +617,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T15:49:29.859584352Z'
+    created: "2026-03-21T15:49:29.859584352Z"
     description: n8n workflow automation platform for AI and integration workflows
       on OpenShift
     digest: ebbfb2a89b50180ae3cd44c061aeab9c38ab4cc72781e434ee3de4226aaaa15e
@@ -638,9 +638,30 @@ entries:
   ogx-ui:
   - apiVersion: v2
     appVersion: 1.0.1
-    created: '2026-09-13T21:34:30.291332881Z'
-    description: "Custom Streamlit UI for Llama Stack \u2014 chat with streaming,\
-      \ RAG, safety shields, and document management"
+    created: "2026-09-13T21:54:31.456320917Z"
+    description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
+      shields, and document management
+    digest: 241151f71ff67daf8f502c70f7cdd550b577b1e43b1cecac85fe07432d7b6e47
+    icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
+    keywords:
+    - llama-stack
+    - streamlit
+    - ui
+    - openshift
+    - rag
+    - guardrails
+    maintainers:
+    - name: hassanbadawy
+    name: ogx-ui
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/ogx-ui-2.0.1/ogx-ui-2.0.1.tgz
+    version: 2.0.1
+  - apiVersion: v2
+    appVersion: 1.0.1
+    created: "2026-09-13T21:34:30.291332881Z"
+    description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
+      shields, and document management
     digest: 5f3fb584459c27725dbcc14a342322096a8e99773019b4b6a30ede3b58c16e9c
     icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
     keywords:
@@ -659,8 +680,8 @@ entries:
     version: 2.0.0
   postgresql-stack:
   - apiVersion: v2
-    appVersion: '16'
-    created: '2026-03-22T01:23:55.577933498Z'
+    appVersion: "16"
+    created: "2026-03-22T01:23:55.577933498Z"
     description: PostgreSQL database stack with pgAdmin, PostgREST API, and Swagger
       UI for OpenShift
     digest: 7c866b3cb4eb654338b6a3be9e7f98640eebcb94cd0a6922cead8542ba636a7b
@@ -681,8 +702,8 @@ entries:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/postgresql-stack-0.2.0/postgresql-stack-0.2.0.tgz
     version: 0.2.0
   - apiVersion: v2
-    appVersion: '16'
-    created: '2026-03-21T23:26:48.808321746Z'
+    appVersion: "16"
+    created: "2026-03-21T23:26:48.808321746Z"
     description: PostgreSQL database stack with pgAdmin, PostgREST API, and Swagger
       UI for OpenShift
     digest: bb82d0f22a329d709c700d84f5352fce2df8a851069579eabd865f977d8df7a5
@@ -705,7 +726,7 @@ entries:
   qdrant:
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T16:14:56.793249328Z'
+    created: "2026-03-21T16:14:56.793249328Z"
     description: Qdrant vector database for similarity search and AI applications
       on OpenShift
     digest: 521242b6787fcde24522a3a6e96f8e2c1e4c7dc4d3653e1a39445db4961b890a
@@ -725,7 +746,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: '2026-03-21T15:49:30.298347508Z'
+    created: "2026-03-21T15:49:30.298347508Z"
     description: Qdrant vector database for similarity search and AI applications
       on OpenShift
     digest: a6dd3919fb709dbbfc6db0f01c4b2d624fe9466553ebd44ddbaada5cfe234960
@@ -743,4 +764,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: '2026-09-13T21:34:30.291406298Z'
+generated: "2026-09-13T21:54:31.456376511Z"
