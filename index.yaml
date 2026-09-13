@@ -739,6 +739,28 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/n8n-0.1.0/n8n-0.1.0.tgz
     version: 0.1.0
+  ogx-ui:
+  - apiVersion: v2
+    appVersion: 1.0.1
+    created: "2026-09-13T21:34:30.291332881Z"
+    description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety
+      shields, and document management
+    digest: 5f3fb584459c27725dbcc14a342322096a8e99773019b4b6a30ede3b58c16e9c
+    icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
+    keywords:
+    - llama-stack
+    - streamlit
+    - ui
+    - openshift
+    - rag
+    - guardrails
+    maintainers:
+    - name: hassanbadawy
+    name: ogx-ui
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/ogx-ui-2.0.0/ogx-ui-2.0.0.tgz
+    version: 2.0.0
   postgresql-stack:
   - apiVersion: v2
     appVersion: "16"
@@ -825,4 +847,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-08T20:41:49.674435+03:00"
+generated: "2026-09-13T21:34:30.291406298Z"
