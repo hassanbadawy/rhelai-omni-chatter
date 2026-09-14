@@ -1,0 +1,8 @@
+define bot refuse blocked topic
+  "I'm sorry, I can't discuss that topic."
+
+define subflow check blocked terms
+  $blocked = execute check_blocked_terms
+  if $blocked
+    bot refuse blocked topic
+    stop

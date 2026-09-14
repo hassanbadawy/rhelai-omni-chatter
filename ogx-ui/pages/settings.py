@@ -1,7 +1,7 @@
 import streamlit as st
 
 from modules.api import client
-from modules.config import load_config, save_config
+from modules.config import load_config, guardrailed_choices, save_config
 
 
 def settings_page():
@@ -65,6 +65,10 @@ def settings_page():
         model_ids = client.get_llm_models_from(url)
     except Exception as e:
         st.error(f"Failed to fetch models: {e}")
+
+    # Offer a "guardrailed/<model>" twin for each model when a guardrails
+    # endpoint is configured. Picking one routes generation through NeMo.
+    model_ids = guardrailed_choices(model_ids, config)
 
     saved_model = config.get("model", "")
     if model_ids:

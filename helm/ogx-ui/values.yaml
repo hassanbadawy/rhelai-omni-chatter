@@ -104,6 +104,21 @@ ui:
   defaultModel: ""
 
 # Additional environment variables
+# --- NeMo Guardrails (RHOAI 3.5) ---
+# In-cluster the guardrails Service is fronted by kube-rbac-proxy: HTTPS on :443,
+# requiring a bearer token whose subject can `get services/<name>-service` in the
+# guardrails namespace. The chart grants that RBAC when rbac.create is true and
+# the app auto-detects the pod's SA token + service-CA bundle.
+guardrails:
+  # e.g. https://nemoguardrails.genai.svc   (leave "" to disable guardrails)
+  url: ""
+  configId: "guardrail-config"
+  # Namespace and Service name the rbac-proxy authorizes against.
+  namespace: ""
+  serviceName: "nemoguardrails-service"
+  rbac:
+    create: true
+
 env:
   STREAMLIT_SERVER_PORT: "8501"
   STREAMLIT_SERVER_ADDRESS: "0.0.0.0"

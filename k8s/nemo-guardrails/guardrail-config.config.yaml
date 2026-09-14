@@ -1,11 +1,15 @@
-# Guardrail LLM: the in-cluster OGX (Llama Stack) endpoint, not a placeholder.
+# Guardrail LLM: vLLM DIRECTLY, not via OGX. Guardrails sit on top of the
+# model server, so the bare served-model-name is used (no vllm-inference-1/
+# prefix - that prefix only exists inside Llama Stack's registry).
 models:
   - type: main
     engine: openai
-    model: vllm-inference-1/redhataiministral-3-3b-instruc
+    model: redhataiministral-3-3b-instruc
     api_key_env_var: GUARDRAIL_API_KEY
     parameters:
-      base_url: "http://lsd-genai-playground-service.genai.svc.cluster.local:8321/v1"
+      base_url: "https://redhataiministral-3-3b-instruc-kserve-workload-svc.genai.svc:8000/v1"
+
+streaming: True
 
 rails:
   config:
@@ -29,9 +33,21 @@ rails:
           - IBAN_CODE
   input:
     flows:
+      - check blocked terms              # deterministic keyword blocklist
       - detect sensitive data on input   # deterministic PII
       - self check input                 # LLM judge: jailbreak / prompt injection
   output:
+    # Required when streaming with output rails: NeMo raises
+    # StreamingNotSupportedError unless rails.output.streaming.enabled is True.
+    # Rails are then applied to rolling chunks rather than the whole response.
+    streaming:
+      enabled: True
+      chunk_size: 200
+      context_size: 50
     flows:
-      - detect sensitive data on output  # deterministic PII leak prevention
-      - self check output                # LLM judge: policy violations
+      # Deterministic PII leak prevention only. `self check output` was removed:
+      # a 3B judge refused its own benign answers ~2 of 3 times (e.g. "What is
+      # the capital of France?" -> "I'm sorry, I can't respond to that."),
+      # which makes the assistant unusable. Jailbreak/policy is still enforced
+      # on the INPUT side, where the judge is reliable.
+      - detect sensitive data on output

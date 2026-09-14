@@ -101,14 +101,37 @@ class LlamaStackClient:
         resp.raise_for_status()
         return resp.json()
 
-    def chat_completions_stream(self, messages, model, **kwargs):
-        """Streaming chat completion - yields content chunks"""
+    def chat_completions_stream(self, messages, model, base_url=None,
+                                guardrails_config_id=None, token=None, verify=None,
+                                **kwargs):
+        """Streaming chat completion - yields content chunks.
+
+        base_url defaults to the OGX/Llama Stack endpoint. When guardrails are
+        active the caller passes the NeMo base_url plus guardrails_config_id, so
+        generation runs THROUGH NeMo and rails are applied inline -- the model is
+        reached via NeMo's own configured base_url. With guardrails off the
+        request goes straight to OGX.
+        """
+        target = (base_url or self.base_url).rstrip("/")
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        # NeMo streams too, provided the rails config sets `streaming: True`
+        # AND `rails.output.streaming.enabled: True` -- without the latter it
+        # raises StreamingNotSupportedError and returns a normal envelope whose
+        # content is the string "Internal server error".
         payload = {"messages": messages, "model": model, "stream": True, **kwargs}
-        logger.info("Chat completions stream to %s/v1/chat/completions", self.base_url)
+        if guardrails_config_id:
+            payload["guardrails"] = {"config_id": guardrails_config_id}
+        logger.info("Chat completions stream to %s/v1/chat/completions (guardrails=%s)",
+                    target, bool(guardrails_config_id))
         logger.debug("Payload: %s", json.dumps(payload, default=str))
         with requests.post(
-            f"{self.base_url}/v1/chat/completions",
+            f"{target}/v1/chat/completions",
             json=payload,
+            headers=headers,
+            verify=verify if verify is not None else True,
             stream=True,
             timeout=120,
         ) as resp:
@@ -460,10 +483,18 @@ class LlamaStackClient:
         except requests.RequestException:
             return []
 
-    def run_nemo_guardrail(self, guardrails_url, messages, model, config_id="guardrail-config"):
+    def run_nemo_guardrail(self, guardrails_url, messages, model,
+                           config_id="guardrail-config", token=None, verify=None):
         """Run a NeMo Guardrails check via /v1/guardrail/checks (RHOAI 3.5 / OGX).
 
         OGX exposes no safety API at all, so run_shield() 404s against it.
+
+        In-cluster the Service (nemoguardrails.<ns>.svc:443) is fronted by
+        kube-rbac-proxy, which requires a bearer token whose subject can
+        `get services/<name>-service` in the guardrails namespace, and serves a
+        service-CA signed cert. Pass `token` and `verify` (CA bundle path) for
+        that. For local dev against a port-forward of the pod's plain-HTTP 8000,
+        neither is needed.
 
         MUST send guardrails.config_id. Passing an inline `config` is rejected by
         the server, which still answers HTTP 200 with status "error" and no rails
@@ -471,10 +502,15 @@ class LlamaStackClient:
 
         Returns a violation dict shaped like run_shield()'s, or None if allowed.
         """
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         resp = requests.post(
             f"{guardrails_url.rstrip('/')}/v1/guardrail/checks",
             json={"model": model, "messages": messages,
                   "guardrails": {"config_id": config_id}},
+            headers=headers,
+            verify=verify if verify is not None else True,
             timeout=60,
         )
         resp.raise_for_status()

@@ -41,6 +41,12 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           env:
+            {{- if .Values.guardrails.url }}
+            - name: NEMO_GUARDRAILS_URL
+              value: {{ .Values.guardrails.url | quote }}
+            - name: NEMO_GUARDRAILS_CONFIG_ID
+              value: {{ .Values.guardrails.configId | quote }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

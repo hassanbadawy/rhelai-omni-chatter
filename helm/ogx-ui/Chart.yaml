@@ -2,7 +2,7 @@ apiVersion: v2
 name: ogx-ui
 description: Custom Streamlit UI for Llama Stack — chat with streaming, RAG, safety shields, and document management
 type: application
-version: 2.0.1
+version: 2.1.0
 appVersion: "1.0.1"
 icon: https://previews.123rf.com/images/eriek/eriek2007/eriek200700074/152273778-jumping-llama-cartoon-alpaca.jpg
 keywords:

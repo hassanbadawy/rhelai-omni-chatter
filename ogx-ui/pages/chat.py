@@ -8,6 +8,9 @@ from modules.config import (
     get_user_chat_names,
     set_user_chat_name,
     remove_user_chat_name,
+    guardrails_auth,
+    is_guardrailed,
+    strip_guardrail,
 )
 
 logger = logging.getLogger(__name__)
@@ -255,14 +258,18 @@ def chat_page():
                 )
 
         # --- Input guardrails: NeMo (RHOAI 3.5 / OGX) takes precedence over shields ---
+        # Guardrails are activated by picking a "guardrailed/<model>" entry in
+        # Settings. safety_enabled still works as a global override.
         guardrails_url = config.get("guardrails_url", "")
-        if config.get("safety_enabled") and guardrails_url:
+        _gr_selected = is_guardrailed(selected_model) or bool(config.get("safety_enabled"))
+        if _gr_selected and guardrails_url:
             try:
                 violation = client.run_nemo_guardrail(
                     guardrails_url,
                     [{"role": "user", "content": input_text}],
-                    config.get("model", ""),
+                    strip_guardrail(config.get("model", "")),
                     config.get("guardrails_config_id", "guardrail-config"),
+                    *guardrails_auth(config),
                 )
             except Exception as e:
                 violation = {"user_message": f"Guardrail unreachable: {e}",
@@ -338,9 +345,18 @@ def chat_page():
             logger.info("Sending chat completion — model=%s, messages=%d, max_tokens=%d",
                         selected_model, len(api_messages), effective_max_tokens)
             try:
+                # Guardrails ON  -> generate THROUGH NeMo (rails applied inline).
+                # Guardrails OFF -> straight to OGX.
+                _gr_on = bool(_gr_selected and guardrails_url)
+                _gr_token, _gr_verify = guardrails_auth(config) if _gr_on else (None, None)
                 for chunk in client.chat_completions_stream(
                     messages=api_messages,
-                    model=selected_model,
+                    model=strip_guardrail(selected_model),
+                    base_url=guardrails_url if _gr_on else None,
+                    guardrails_config_id=(config.get("guardrails_config_id", "guardrail-config")
+                                          if _gr_on else None),
+                    token=_gr_token,
+                    verify=_gr_verify,
                     temperature=temperature,
                     top_p=top_p,
                     max_tokens=effective_max_tokens,
@@ -356,14 +372,15 @@ def chat_page():
             logger.info("Response complete — length=%d", len(full_response))
 
             # --- Output guardrails: NeMo (RHOAI 3.5 / OGX) ---
-            if config.get("safety_enabled") and guardrails_url and full_response:
+            if _gr_selected and guardrails_url and full_response:
                 try:
                     violation = client.run_nemo_guardrail(
                         guardrails_url,
                         [{"role": "user", "content": input_text},
                          {"role": "assistant", "content": full_response}],
-                        config.get("model", ""),
+                        strip_guardrail(config.get("model", "")),
                         config.get("guardrails_config_id", "guardrail-config"),
+                    *guardrails_auth(config),
                     )
                 except Exception as e:
                     violation = {"user_message": f"Guardrail unreachable: {e}",

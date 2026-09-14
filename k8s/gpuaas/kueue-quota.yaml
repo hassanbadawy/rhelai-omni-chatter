@@ -1,0 +1,56 @@
+---
+# Pins quota to the A10G GPU nodes. MIG is NOT possible on A10G (not a
+# data-center SKU), so quota is whole GPUs: 2 nodes x 1 GPU = 2 allocatable units.
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: gpu-a10g
+spec:
+  nodeLabels:
+    nvidia.com/gpu.product: NVIDIA-A10G
+  # Workloads admitted here get this toleration so they land on the GPU nodes
+  # if those are tainted later.
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule
+---
+# CPU/memory for workloads that need no GPU, so a queue can admit mixed work.
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  name: default-flavor
+---
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  name: gpu-cluster-queue
+spec:
+  namespaceSelector: {}          # all namespaces may target it via a LocalQueue
+  # Cohort lets future queues borrow unused quota from each other.
+  cohort: gpu-pool
+  resourceGroups:
+    - coveredResources: ["nvidia.com/gpu"]
+      flavors:
+        - name: gpu-a10g
+          resources:
+            - name: "nvidia.com/gpu"
+              nominalQuota: 2     # the whole cluster's GPU capacity
+    - coveredResources: ["cpu", "memory"]
+      flavors:
+        - name: default-flavor
+          resources:
+            - name: "cpu"
+              nominalQuota: 30
+            - name: "memory"
+              nominalQuota: 120Gi
+---
+# Namespace-scoped entry point. Workloads set:
+#   metadata.labels["kueue.x-k8s.io/queue-name"] = gpu-queue
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: LocalQueue
+metadata:
+  name: gpu-queue
+  namespace: genai
+spec:
+  clusterQueue: gpu-cluster-queue

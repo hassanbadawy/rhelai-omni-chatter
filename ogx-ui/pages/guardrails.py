@@ -2,7 +2,7 @@ import time
 import streamlit as st
 
 from modules.api import client
-from modules.config import load_config
+from modules.config import load_config, guardrails_auth
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
 
@@ -288,6 +288,7 @@ def _run_shield(shield_id, text):
                 _gr, [{"role": "user", "content": text}],
                 _cfg.get("model", ""),
                 _cfg.get("guardrails_config_id", "guardrail-config"),
+                *guardrails_auth(_cfg),
             )
             return v, int((time.time() - t0) * 1000), None
         v = client.run_shield(shield_id, [{"role":"user","content":text}])
