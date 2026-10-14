@@ -1,0 +1,13 @@
+apiVersion: v2
+name: mcp-server-prereqs
+description: Per-project prerequisites (ServiceAccount, RBAC, config ConfigMap) so the OpenShift AI MCP catalog "Deploy MCP server" button works for the OpenShift MCP server
+type: application
+version: 0.1.0
+appVersion: "3.5"
+keywords:
+  - mcp
+  - openshift-ai
+  - rhoai
+  - openshift-mcp-server
+maintainers:
+  - name: hassanbadawy

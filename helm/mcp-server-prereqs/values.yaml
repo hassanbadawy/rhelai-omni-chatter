@@ -1,0 +1,33 @@
+# Install this chart into the PROJECT where you will click "Deploy MCP server"
+# (AI hub -> MCP servers). Everything is created in the release namespace.
+# The names below are what the RHOAI 3.5 catalog entry "openshift-mcp-server"
+# generates; change them only if your catalog entry expects different ones.
+
+serviceAccount:
+  create: true
+  name: mcp-viewer
+
+rbac:
+  create: true
+  # namespace: read access only inside this project (least privilege)
+  # cluster:   read access cluster-wide (needed for nodes, cluster-level inspection)
+  scope: namespace
+  # ClusterRole bound to the ServiceAccount. "view" has no access to Secrets.
+  clusterRole: view
+
+config:
+  create: true
+  configMapName: openshift-mcp-server-config
+  # Key mounted at /etc/mcp-config/<key>; the catalog passes --config /etc/mcp-config/config.toml
+  fileName: config.toml
+  port: "8080"
+  readOnly: true
+  disableDestructive: true
+  toolsets:
+    - core
+    - config
+  # Optional resource kinds the server must refuse to touch.
+  deniedResources: []
+  #  - {group: "", version: v1, kind: Secret}
+  # Raw TOML appended verbatim to the generated file.
+  extraConfig: ""

@@ -1,0 +1,26 @@
+{{- if .Values.config.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.config.configMapName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-server-prereqs.labels" . | nindent 4 }}
+data:
+  {{ .Values.config.fileName }}: |
+    port = {{ .Values.config.port | quote }}
+    read_only = {{ .Values.config.readOnly }}
+    disable_destructive = {{ .Values.config.disableDestructive }}
+    toolsets = [{{ range $i, $t := .Values.config.toolsets }}{{ if $i }}, {{ end }}{{ $t | quote }}{{ end }}]
+    {{- range .Values.config.deniedResources }}
+
+    [[denied_resources]]
+    group = {{ .group | quote }}
+    version = {{ .version | quote }}
+    kind = {{ .kind | quote }}
+    {{- end }}
+    {{- with .Values.config.extraConfig }}
+
+    {{- . | nindent 4 }}
+    {{- end }}
+{{- end }}
