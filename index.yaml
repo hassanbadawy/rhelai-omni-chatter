@@ -549,6 +549,26 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/locate-anything-0.1.0/locate-anything-0.1.0.tgz
     version: 0.1.0
+  mcp-server-prereqs:
+  - apiVersion: v2
+    appVersion: "3.5"
+    created: "2026-10-14T23:12:19.922182806Z"
+    description: Per-project prerequisites (ServiceAccount, RBAC, config ConfigMap)
+      so the OpenShift AI MCP catalog "Deploy MCP server" button works for the OpenShift
+      MCP server
+    digest: 62325bff2b41b58f5f65cf8eb243f89c1f835ea6f037f131ae9ac59537e2dab1
+    keywords:
+    - mcp
+    - openshift-ai
+    - rhoai
+    - openshift-mcp-server
+    maintainers:
+    - name: hassanbadawy
+    name: mcp-server-prereqs
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/mcp-server-prereqs-0.1.0/mcp-server-prereqs-0.1.0.tgz
+    version: 0.1.0
   milvus:
   - apiVersion: v2
     appVersion: "2.4"
@@ -785,4 +805,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-09-14T12:50:48.124458531Z"
+generated: "2026-10-14T23:12:19.922260421Z"
