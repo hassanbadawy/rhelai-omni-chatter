@@ -597,6 +597,25 @@ entries:
   minio:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-10-15T12:47:07.75562109Z"
+    description: MinIO S3-compatible object storage for AI model weights and data
+      on OpenShift
+    digest: b8251df5f24fc6aedf27719a514a8bca5c29be4ecee8a39f32a4b57a92d75753
+    icon: https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg
+    keywords:
+    - minio
+    - s3
+    - object-storage
+    - openshift
+    maintainers:
+    - name: hasanbadawy
+    name: minio
+    type: application
+    urls:
+    - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/minio-0.1.1/minio-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-03-22T01:33:58.588227488Z"
     description: MinIO S3-compatible object storage for AI model weights and data
       on OpenShift
@@ -805,4 +824,4 @@ entries:
     urls:
     - https://github.com/hassanbadawy/rhelai-omni-chatter/releases/download/qdrant-0.1.0/qdrant-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-14T23:12:19.922260421Z"
+generated: "2026-10-15T12:47:07.755679054Z"
