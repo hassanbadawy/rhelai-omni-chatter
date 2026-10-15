@@ -1,4 +1,7 @@
-image: quay.io/minio/minio:latest
+# quay.io/minio/minio and docker.io/minio/minio return 401 anonymously (checked
+# 2026-10-15). bitnamilegacy/minio still pulls anonymously (frozen, unmaintained,
+# MinIO 2025-05-24 build). Swap to your own mirror/build via `image` + pull secret.
+image: docker.io/bitnamilegacy/minio:latest
 # IfNotPresent: a node that already has the image keeps working when the
 # registry is unreachable or starts requiring auth (quay.io/minio/minio now
 # returns 401 anonymously, so `Always` + `:latest` leaves the pod in
@@ -8,7 +11,9 @@ imagePullPolicy: IfNotPresent
 imagePullSecrets: []
 # Override the container start command / arguments. Needed for images whose
 # entrypoint is not the upstream `minio` binary (leave empty for upstream).
-command: []
+command:
+  - minio
+# Leave empty to get `server /data --console-address :<consolePort>`.
 args: []
 storage: 20Gi
 

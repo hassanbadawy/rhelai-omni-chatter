@@ -2,7 +2,7 @@ apiVersion: v2
 name: minio
 description: MinIO S3-compatible object storage for AI model weights and data on OpenShift
 type: application
-version: 0.1.1
+version: 0.2.0
 appVersion: "latest"
 icon: https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg
 keywords:
