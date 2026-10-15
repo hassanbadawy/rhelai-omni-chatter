@@ -1,4 +1,15 @@
 image: quay.io/minio/minio:latest
+# IfNotPresent: a node that already has the image keeps working when the
+# registry is unreachable or starts requiring auth (quay.io/minio/minio now
+# returns 401 anonymously, so `Always` + `:latest` leaves the pod in
+# ImagePullBackOff after any restart).
+imagePullPolicy: IfNotPresent
+# Pull secrets for a private registry, e.g. [{name: my-pull-secret}]
+imagePullSecrets: []
+# Override the container start command / arguments. Needed for images whose
+# entrypoint is not the upstream `minio` binary (leave empty for upstream).
+command: []
+args: []
 storage: 20Gi
 
 rootUser: minio
